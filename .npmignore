@@ -1,0 +1,23 @@
+# Dependencies
+node_modules/
+
+# User data
+pdfs/
+
+# System files
+.DS_Store
+.env
+*.log
+
+# Development
+.git/
+.gitignore
+npm-debug.log*
+.vscode/
+
+# Testing
+coverage/
+.nyc_output/
+
+# Build
+dist/

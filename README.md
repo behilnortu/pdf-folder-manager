@@ -1,0 +1,120 @@
+# PDF Folder Manager
+
+A web-based PDF management system that automatically organizes and displays PDFs from monitored folders. Features a clean three-column layout for easy navigation and viewing.
+
+## Features
+
+- **Automatic Detection**: Monitors the `pdfs/` directory for new PDFs and folders
+- **Three-Column Layout**:
+  - Left sidebar: List of folders containing PDFs
+  - Main section: PDF viewer
+  - Right sidebar: List of PDFs in selected folder
+- **Real-time Updates**: Automatically refreshes when PDFs are added or removed
+- **In-browser Viewing**: View PDFs directly in the browser without downloading
+- **Search Functionality**: Filter PDFs by name in real-time
+- **Folder Creation**: Create new folders directly from the web interface
+- **PDF Upload**: Upload PDFs through the web interface (supports multiple files)
+
+## Installation
+
+1. Install dependencies:
+```bash
+npm install
+```
+
+2. The `pdfs/` directory will be created automatically on first run
+
+## Usage
+
+1. Start the server:
+```bash
+npm start
+```
+
+2. Open your browser and navigate to:
+```
+http://localhost:3000
+```
+
+3. Using the interface:
+
+   **Creating Folders:**
+   - Click the "+ New Folder" button in the left sidebar
+   - Enter a folder name in the modal dialog
+   - Click "Create" to add the folder
+
+   **Uploading PDFs:**
+   - Select a folder from the left sidebar
+   - Click the "+ Upload PDF" button in the right sidebar
+   - Select one or more PDF files from your computer
+   - Files will upload automatically and appear in the list
+
+   **Viewing PDFs:**
+   - Click on a folder in the left sidebar to view its PDFs
+   - Click on a PDF in the right sidebar to view it in the main section
+
+   **Searching PDFs:**
+   - Type in the search box in the right sidebar to filter PDFs by name
+   - Search is case-insensitive and updates in real-time
+
+   **Adding PDFs Manually:**
+   - You can also create subdirectories in the `pdfs/` folder (e.g., `pdfs/invoices/`)
+   - Add PDF files to these subdirectories
+   - The website will automatically detect and display them within 2 seconds
+
+## Project Structure
+
+```
+/
+├── public/              # Frontend files
+│   ├── index.html      # Main HTML structure
+│   ├── styles.css      # Styling
+│   └── app.js          # Frontend JavaScript
+├── server/             # Backend server
+│   └── server.js       # Express server with file monitoring
+├── pdfs/               # PDF storage (auto-created)
+│   ├── folder1/        # Example folder
+│   └── folder2/        # Example folder
+├── package.json        # Dependencies
+└── README.md          # This file
+```
+
+## Example Setup
+
+To test the application, create some sample folders:
+
+```bash
+mkdir -p pdfs/invoices
+mkdir -p pdfs/reports
+mkdir -p pdfs/contracts
+```
+
+Then add some PDF files to these folders, and they will appear automatically in the web interface.
+
+## API Endpoints
+
+- `GET /api/folders` - Returns list of all folders
+- `GET /api/folders/:folderName/pdfs` - Returns list of PDFs in a folder
+- `GET /api/pdf/:folderName/:pdfName` - Serves a specific PDF file
+- `POST /api/folders` - Creates a new folder (requires JSON body with `folderName`)
+- `POST /api/folders/:folderName/upload` - Uploads PDFs to a folder (multipart/form-data)
+
+## Development
+
+To run with auto-restart on file changes:
+
+```bash
+npm run dev
+```
+
+## Technologies Used
+
+- **Backend**: Node.js, Express.js
+- **File Monitoring**: chokidar
+- **File Upload**: multer
+- **Frontend**: Vanilla JavaScript, HTML5, CSS3
+- **PDF Viewing**: Browser native PDF viewer
+
+## License
+
+MIT

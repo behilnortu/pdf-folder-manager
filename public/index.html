@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PDF Folder Manager</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <!-- Left Sidebar: Folders -->
+        <aside class="sidebar left-sidebar">
+            <h2>Folders</h2>
+            <div class="toolbar">
+                <button id="new-folder-btn" class="btn btn-primary" title="Create new folder">+ New Folder</button>
+            </div>
+            <div id="folder-list" class="list">
+                <p class="empty-message">No folders found</p>
+            </div>
+        </aside>
+
+        <!-- Main Section: PDF Viewer -->
+        <main class="main-section">
+            <div id="pdf-viewer" class="pdf-viewer">
+                <div class="welcome-message">
+                    <h1>PDF Folder Manager</h1>
+                    <p>Select a folder from the left sidebar to view PDFs</p>
+                    <p>Click on a PDF from the right sidebar to view it here</p>
+                </div>
+            </div>
+        </main>
+
+        <!-- Right Sidebar: PDF List -->
+        <aside class="sidebar right-sidebar">
+            <h2>PDFs</h2>
+            <div class="toolbar">
+                <input type="text" id="search-input" class="search-input" placeholder="Search PDFs...">
+                <button id="upload-pdf-btn" class="btn btn-primary" title="Upload PDF">+ Upload PDF</button>
+            </div>
+            <div id="pdf-list" class="list">
+                <p class="empty-message">Select a folder to view PDFs</p>
+            </div>
+        </aside>
+    </div>
+
+    <!-- Modal for creating new folder -->
+    <div id="folder-modal" class="modal">
+        <div class="modal-content">
+            <h3>Create New Folder</h3>
+            <input type="text" id="folder-name-input" class="modal-input" placeholder="Enter folder name">
+            <div class="modal-actions">
+                <button id="create-folder-btn" class="btn btn-success">Create</button>
+                <button id="cancel-folder-btn" class="btn btn-secondary">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Hidden file input for PDF upload -->
+    <input type="file" id="pdf-file-input" accept=".pdf" style="display: none;" multiple>
+
+    <script src="app.js"></script>
+</body>
+</html>
