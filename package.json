@@ -23,12 +23,12 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/behilnortu/pdf-folde-manager.git"
+    "url": "git+https://github.com/behilnortu/pdf-folder-manager.git"
   },
   "bugs": {
-    "url": "https://github.com/behilnortu/pdf-folde-manager/issues"
+    "url": "https://github.com/behilnortu/pdf-folder-manager/issues"
   },
-  "homepage": "https://github.com/behilnortu/pdf-folde-manager#readme",
+  "homepage": "https://github.com/behilnortu/pdf-folder-manager#readme",
   "engines": {
     "node": ">=18.0.0"
   },
