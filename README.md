@@ -1,8 +1,25 @@
 # PDF Folder Manager
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Node Version](https://img.shields.io/badge/node-%3E%3D18.0.0-brightgreen.svg)](https://nodejs.org/)
+[![GitHub Stars](https://img.shields.io/github/stars/behilnortu/pdf-folder-manager.svg)](https://github.com/behilnortu/pdf-folder-manager/stargazers)
+[![GitHub Issues](https://img.shields.io/github/issues/behilnortu/pdf-folder-manager.svg)](https://github.com/behilnortu/pdf-folder-manager/issues)
+[![GitHub Forks](https://img.shields.io/github/forks/behilnortu/pdf-folder-manager.svg)](https://github.com/behilnortu/pdf-folder-manager/network)
+
 A web-based PDF management system that automatically organizes and displays PDFs from monitored folders. Features a clean three-column layout for easy navigation and viewing.
 
-## Features
+---
+
+## 📸 Screenshot
+
+![PDF Folder Manager Interface](https://via.placeholder.com/800x500/3498db/ffffff?text=PDF+Folder+Manager)
+*Three-column layout: Folders (left) | PDF Viewer (center) | PDF List with Search (right)*
+
+> **Note:** Replace the placeholder above with an actual screenshot of your application by uploading an image to your repository and updating the URL.
+
+---
+
+## ✨ Features
 
 - **Automatic Detection**: Monitors the `pdfs/` directory for new PDFs and folders
 - **Three-Column Layout**:
@@ -15,7 +32,26 @@ A web-based PDF management system that automatically organizes and displays PDFs
 - **Folder Creation**: Create new folders directly from the web interface
 - **PDF Upload**: Upload PDFs through the web interface (supports multiple files)
 
-## Installation
+## 🚀 Quick Start
+
+```bash
+# Clone the repository
+git clone https://github.com/behilnortu/pdf-folder-manager.git
+cd pdf-folder-manager
+
+# Install dependencies
+npm install
+
+# Start the server
+npm start
+
+# Open in your browser
+# http://localhost:3000
+```
+
+---
+
+## 📦 Installation
 
 1. Install dependencies:
 ```bash
@@ -24,7 +60,7 @@ npm install
 
 2. The `pdfs/` directory will be created automatically on first run
 
-## Usage
+## 💻 Usage
 
 1. Start the server:
 ```bash
@@ -62,7 +98,7 @@ http://localhost:3000
    - Add PDF files to these subdirectories
    - The website will automatically detect and display them within 2 seconds
 
-## Project Structure
+## 📁 Project Structure
 
 ```
 /
@@ -79,7 +115,7 @@ http://localhost:3000
 └── README.md          # This file
 ```
 
-## Example Setup
+## 🎯 Example Setup
 
 To test the application, create some sample folders:
 
@@ -91,7 +127,7 @@ mkdir -p pdfs/contracts
 
 Then add some PDF files to these folders, and they will appear automatically in the web interface.
 
-## API Endpoints
+## 🔌 API Endpoints
 
 - `GET /api/folders` - Returns list of all folders
 - `GET /api/folders/:folderName/pdfs` - Returns list of PDFs in a folder
@@ -99,7 +135,7 @@ Then add some PDF files to these folders, and they will appear automatically in 
 - `POST /api/folders` - Creates a new folder (requires JSON body with `folderName`)
 - `POST /api/folders/:folderName/upload` - Uploads PDFs to a folder (multipart/form-data)
 
-## Development
+## 🛠️ Development
 
 To run with auto-restart on file changes:
 
@@ -107,7 +143,7 @@ To run with auto-restart on file changes:
 npm run dev
 ```
 
-## Technologies Used
+## 🧰 Technologies Used
 
 - **Backend**: Node.js, Express.js
 - **File Monitoring**: chokidar
@@ -115,6 +151,24 @@ npm run dev
 - **Frontend**: Vanilla JavaScript, HTML5, CSS3
 - **PDF Viewing**: Browser native PDF viewer
 
-## License
+---
 
-MIT
+## 🤝 Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
+
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to the branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
+
+## 📄 License
+
+MIT © [behilnortu](https://github.com/behilnortu)
+
+---
+
+## ⭐ Show Your Support
+
+Give a ⭐️ if this project helped you!
