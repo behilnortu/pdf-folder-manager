@@ -300,6 +300,51 @@ app.put('/api/folders/:folderName/pdf/:oldPdfName', async (req, res) => {
     }
 });
 
+// API endpoint to move a PDF to another folder
+app.post('/api/folders/:sourceFolderName/pdf/:pdfName/move', async (req, res) => {
+    const sourceFolderName = req.params.sourceFolderName;
+    const pdfName = req.params.pdfName;
+    const { destinationFolderName } = req.body;
+
+    if (!destinationFolderName || destinationFolderName.trim() === '') {
+        return res.status(400).json({ error: 'Destination folder name is required' });
+    }
+
+    const sourcePdfPath = path.join(PDF_DIR, sourceFolderName, pdfName);
+    const destinationFolderPath = path.join(PDF_DIR, destinationFolderName);
+    const destinationPdfPath = path.join(destinationFolderPath, pdfName);
+
+    try {
+        // Check if source PDF exists
+        if (!fsSync.existsSync(sourcePdfPath)) {
+            return res.status(404).json({ error: 'PDF not found' });
+        }
+
+        // Check if destination folder exists
+        if (!fsSync.existsSync(destinationFolderPath)) {
+            return res.status(404).json({ error: 'Destination folder not found' });
+        }
+
+        // Check if PDF with same name already exists in destination
+        if (fsSync.existsSync(destinationPdfPath)) {
+            return res.status(409).json({ error: 'A PDF with this name already exists in the destination folder' });
+        }
+
+        // Check if source and destination are the same
+        if (sourceFolderName === destinationFolderName) {
+            return res.status(400).json({ error: 'Source and destination folders are the same' });
+        }
+
+        await fs.rename(sourcePdfPath, destinationPdfPath);
+        await scanPdfDirectory();
+
+        res.json({ success: true, message: 'PDF moved successfully' });
+    } catch (err) {
+        console.error('Error moving PDF:', err);
+        res.status(500).json({ error: 'Failed to move PDF' });
+    }
+});
+
 // API endpoint to move folder to trash
 app.delete('/api/folders/:folderName', async (req, res) => {
     const folderName = req.params.folderName;

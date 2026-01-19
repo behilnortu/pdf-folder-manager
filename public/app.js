@@ -6,6 +6,7 @@ let filteredPdfs = [];
 let searchQuery = '';
 let renameType = null; // 'folder' or 'pdf'
 let renameTarget = null; // name of folder or pdf to rename
+let movePdfTarget = null; // name of pdf to move
 
 // DOM elements
 const folderListElement = document.getElementById('folder-list');
@@ -34,6 +35,12 @@ const leftSidebar = document.getElementById('left-sidebar');
 const rightSidebar = document.getElementById('right-sidebar');
 const leftResizeHandle = document.getElementById('left-resize-handle');
 const rightResizeHandle = document.getElementById('right-resize-handle');
+const clearPdfBtn = document.getElementById('clear-pdf-btn');
+const moveModal = document.getElementById('move-modal');
+const movePdfName = document.getElementById('move-pdf-name');
+const moveFolderSelect = document.getElementById('move-folder-select');
+const moveConfirmBtn = document.getElementById('move-confirm-btn');
+const moveCancelBtn = document.getElementById('move-cancel-btn');
 
 // Load folders from API
 async function loadFolders() {
@@ -70,7 +77,8 @@ function renderFolders() {
 
         const renameBtn = document.createElement('button');
         renameBtn.className = 'rename-btn';
-        renameBtn.textContent = 'Rename';
+        renameBtn.textContent = '✏️';
+        renameBtn.title = 'Rename folder';
         renameBtn.onclick = (e) => {
             e.stopPropagation();
             showRenameModal('folder', folder);
@@ -78,7 +86,8 @@ function renderFolders() {
 
         const deleteBtn = document.createElement('button');
         deleteBtn.className = 'delete-btn';
-        deleteBtn.textContent = 'Delete';
+        deleteBtn.textContent = '🗑️';
+        deleteBtn.title = 'Delete folder';
         deleteBtn.onclick = (e) => {
             e.stopPropagation();
             deleteFolder(folder);
@@ -161,21 +170,33 @@ function renderPdfs() {
 
         const renameBtn = document.createElement('button');
         renameBtn.className = 'rename-btn';
-        renameBtn.textContent = 'Rename';
+        renameBtn.textContent = '✏️';
+        renameBtn.title = 'Rename PDF';
         renameBtn.onclick = (e) => {
             e.stopPropagation();
             showRenameModal('pdf', pdf);
         };
 
+        const moveBtn = document.createElement('button');
+        moveBtn.className = 'move-btn';
+        moveBtn.textContent = '📁';
+        moveBtn.title = 'Move PDF to another folder';
+        moveBtn.onclick = (e) => {
+            e.stopPropagation();
+            showMoveModal(pdf);
+        };
+
         const deleteBtn = document.createElement('button');
         deleteBtn.className = 'delete-btn';
-        deleteBtn.textContent = 'Delete';
+        deleteBtn.textContent = '🗑️';
+        deleteBtn.title = 'Delete PDF';
         deleteBtn.onclick = (e) => {
             e.stopPropagation();
             deletePdf(pdf);
         };
 
         actions.appendChild(renameBtn);
+        actions.appendChild(moveBtn);
         actions.appendChild(deleteBtn);
 
         pdfItem.addEventListener('click', () => viewPdf(selectedFolder, pdf));
@@ -192,6 +213,23 @@ function viewPdf(folderName, pdfName) {
     pdfViewerElement.innerHTML = `
         <iframe src="${pdfUrl}" type="application/pdf"></iframe>
     `;
+
+    // Show clear button when PDF is loaded
+    clearPdfBtn.style.display = 'block';
+}
+
+// Clear the PDF viewer
+function clearPdf() {
+    pdfViewerElement.innerHTML = `
+        <div class="welcome-message">
+            <h1>PDF Folder Manager</h1>
+            <p>Select a folder from the left sidebar to view PDFs</p>
+            <p>Click on a PDF from the right sidebar to view it here</p>
+        </div>
+    `;
+
+    // Hide clear button
+    clearPdfBtn.style.display = 'none';
 }
 
 // Poll for updates every 2 seconds
@@ -406,6 +444,71 @@ async function renamePdf(oldName, newName) {
     }
 }
 
+// Show move PDF modal
+function showMoveModal(pdfName) {
+    movePdfTarget = pdfName;
+    movePdfName.textContent = `Moving: ${pdfName}`;
+
+    // Populate folder dropdown with all folders except the current one
+    moveFolderSelect.innerHTML = '<option value="">Select destination folder...</option>';
+    folders.forEach(folder => {
+        if (folder !== selectedFolder) {
+            const option = document.createElement('option');
+            option.value = folder;
+            option.textContent = folder;
+            moveFolderSelect.appendChild(option);
+        }
+    });
+
+    moveModal.classList.add('show');
+    moveFolderSelect.focus();
+}
+
+// Hide move PDF modal
+function hideMoveModal() {
+    moveModal.classList.remove('show');
+    moveFolderSelect.value = '';
+    movePdfTarget = null;
+}
+
+// Perform PDF move
+async function performMovePdf() {
+    const destinationFolder = moveFolderSelect.value;
+
+    if (!destinationFolder) {
+        alert('Please select a destination folder');
+        return;
+    }
+
+    if (!selectedFolder || !movePdfTarget) {
+        alert('Invalid move operation');
+        return;
+    }
+
+    try {
+        const response = await fetch(`/api/folders/${encodeURIComponent(selectedFolder)}/pdf/${encodeURIComponent(movePdfTarget)}/move`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ destinationFolderName: destinationFolder })
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+            hideMoveModal();
+            await selectFolder(selectedFolder);
+            alert(`PDF moved to "${destinationFolder}" successfully`);
+        } else {
+            alert(data.error || 'Failed to move PDF');
+        }
+    } catch (error) {
+        console.error('Error moving PDF:', error);
+        alert('Failed to move PDF');
+    }
+}
+
 // Delete folder with confirmation
 async function deleteFolder(folderName) {
     try {
@@ -441,13 +544,7 @@ async function deleteFolder(folderName) {
             if (selectedFolder === folderName) {
                 selectedFolder = null;
                 pdfListElement.innerHTML = '<p class="empty-message">Select a folder to view PDFs</p>';
-                pdfViewerElement.innerHTML = `
-                    <div class="welcome-message">
-                        <h1>PDF Folder Manager</h1>
-                        <p>Select a folder from the left sidebar to view PDFs</p>
-                        <p>Click on a PDF from the right sidebar to view it here</p>
-                    </div>
-                `;
+                clearPdf();
             }
             await loadFolders();
             await loadTrash(); // Update trash count
@@ -483,13 +580,7 @@ async function deletePdf(pdfName) {
             await loadTrash(); // Update trash count
 
             // Clear PDF viewer if the deleted PDF was being viewed
-            pdfViewerElement.innerHTML = `
-                <div class="welcome-message">
-                    <h1>PDF Folder Manager</h1>
-                    <p>Select a folder from the left sidebar to view PDFs</p>
-                    <p>Click on a PDF from the right sidebar to view it here</p>
-                </div>
-            `;
+            clearPdf();
         } else {
             alert(data.error || 'Failed to delete PDF');
         }
@@ -688,6 +779,8 @@ uploadPdfBtn.addEventListener('click', () => {
 
 pdfFileInput.addEventListener('change', uploadPdfs);
 
+clearPdfBtn.addEventListener('click', clearPdf);
+
 folderModal.addEventListener('click', (e) => {
     if (e.target === folderModal) {
         hideModal();
@@ -707,6 +800,16 @@ renameInput.addEventListener('keypress', (e) => {
 renameModal.addEventListener('click', (e) => {
     if (e.target === renameModal) {
         hideRenameModal();
+    }
+});
+
+// Move modal event listeners
+moveCancelBtn.addEventListener('click', hideMoveModal);
+moveConfirmBtn.addEventListener('click', performMovePdf);
+
+moveModal.addEventListener('click', (e) => {
+    if (e.target === moveModal) {
+        hideMoveModal();
     }
 });
 

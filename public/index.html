@@ -25,6 +25,9 @@
 
         <!-- Main Section: PDF Viewer -->
         <main class="main-section" id="main-section">
+            <div class="main-toolbar">
+                <button id="clear-pdf-btn" class="btn btn-secondary btn-sm" style="display: none;">✕ Clear PDF</button>
+            </div>
             <div id="pdf-viewer" class="pdf-viewer">
                 <div class="welcome-message">
                     <h1>PDF Folder Manager</h1>
@@ -86,6 +89,21 @@
             </div>
             <div class="modal-actions">
                 <button id="close-trash-btn" class="btn btn-secondary">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal for moving PDF -->
+    <div id="move-modal" class="modal">
+        <div class="modal-content">
+            <h3>Move PDF to Folder</h3>
+            <p id="move-pdf-name" style="margin-bottom: 15px; color: #666;"></p>
+            <select id="move-folder-select" class="modal-input">
+                <option value="">Select destination folder...</option>
+            </select>
+            <div class="modal-actions">
+                <button id="move-confirm-btn" class="btn btn-success">Move</button>
+                <button id="move-cancel-btn" class="btn btn-secondary">Cancel</button>
             </div>
         </div>
     </div>
