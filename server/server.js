@@ -4,6 +4,7 @@ const fs = require('fs').promises;
 const fsSync = require('fs');
 const chokidar = require('chokidar');
 const multer = require('multer');
+const archiver = require('archiver');
 
 const app = express();
 const PORT = 3000;
@@ -342,6 +343,51 @@ app.post('/api/folders/:sourceFolderName/pdf/:pdfName/move', async (req, res) =>
     } catch (err) {
         console.error('Error moving PDF:', err);
         res.status(500).json({ error: 'Failed to move PDF' });
+    }
+});
+
+// API endpoint to export/download a folder as ZIP
+app.get('/api/folders/:folderName/export', async (req, res) => {
+    const folderName = req.params.folderName;
+    const folderPath = path.join(PDF_DIR, folderName);
+
+    try {
+        // Check if folder exists
+        if (!fsSync.existsSync(folderPath)) {
+            return res.status(404).json({ error: 'Folder not found' });
+        }
+
+        // Set headers for ZIP download
+        const zipFileName = `${folderName}.zip`;
+        res.attachment(zipFileName);
+        res.setHeader('Content-Type', 'application/zip');
+
+        // Create archiver instance
+        const archive = archiver('zip', {
+            zlib: { level: 9 } // Maximum compression
+        });
+
+        // Handle errors
+        archive.on('error', (err) => {
+            console.error('Archive error:', err);
+            res.status(500).json({ error: 'Failed to create ZIP archive' });
+        });
+
+        // Pipe archive to response
+        archive.pipe(res);
+
+        // Add all PDF files from the folder to the archive
+        archive.directory(folderPath, false);
+
+        // Finalize the archive
+        await archive.finalize();
+
+        console.log(`Exported folder "${folderName}" as ZIP`);
+    } catch (err) {
+        console.error('Error exporting folder:', err);
+        if (!res.headersSent) {
+            res.status(500).json({ error: 'Failed to export folder' });
+        }
     }
 });
 

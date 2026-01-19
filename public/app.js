@@ -84,6 +84,15 @@ function renderFolders() {
             showRenameModal('folder', folder);
         };
 
+        const exportBtn = document.createElement('button');
+        exportBtn.className = 'export-btn';
+        exportBtn.textContent = '📦';
+        exportBtn.title = 'Export folder as ZIP';
+        exportBtn.onclick = (e) => {
+            e.stopPropagation();
+            exportFolder(folder);
+        };
+
         const deleteBtn = document.createElement('button');
         deleteBtn.className = 'delete-btn';
         deleteBtn.textContent = '🗑️';
@@ -94,6 +103,7 @@ function renderFolders() {
         };
 
         actions.appendChild(renameBtn);
+        actions.appendChild(exportBtn);
         actions.appendChild(deleteBtn);
 
         if (folder === selectedFolder) {
@@ -507,6 +517,24 @@ async function performMovePdf() {
         console.error('Error moving PDF:', error);
         alert('Failed to move PDF');
     }
+}
+
+// Export folder as ZIP
+function exportFolder(folderName) {
+    // Create download link and trigger download
+    const downloadUrl = `/api/folders/${encodeURIComponent(folderName)}/export`;
+
+    // Create a temporary anchor element to trigger download
+    const link = document.createElement('a');
+    link.href = downloadUrl;
+    link.download = `${folderName}.zip`;
+    link.style.display = 'none';
+
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+    console.log(`Exporting folder: ${folderName}`);
 }
 
 // Delete folder with confirmation
