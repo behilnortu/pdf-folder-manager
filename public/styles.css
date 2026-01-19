@@ -123,6 +123,21 @@ body {
     font-size: 17px;
 }
 
+.list-item-metadata {
+    font-size: 12px;
+    color: #777;
+    margin-top: 4px;
+    font-style: italic;
+}
+
+.list-item:hover .list-item-metadata {
+    color: #555;
+}
+
+.list-item.active .list-item-metadata {
+    color: rgba(255, 255, 255, 0.8);
+}
+
 .list-item-actions {
     display: flex;
     gap: 6px;

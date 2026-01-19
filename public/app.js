@@ -59,6 +59,18 @@ const closeBookmarksBtn = document.getElementById('close-bookmarks-btn');
 const folderSortSelect = document.getElementById('folder-sort-select');
 const pdfSortSelect = document.getElementById('pdf-sort-select');
 
+// Utility function to format file size
+function formatFileSize(bytes) {
+    if (bytes === 0) return '0 B';
+    if (!bytes) return 'Unknown';
+
+    const k = 1024;
+    const sizes = ['B', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+
+    return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+}
+
 // Sorting functions
 function sortItems(items, sortBy) {
     const sorted = [...items];
@@ -218,6 +230,20 @@ function renderPdfs() {
         pdfName.className = 'list-item-name';
         pdfName.textContent = pdf.name;
 
+        // Add metadata display
+        const metadata = document.createElement('div');
+        metadata.className = 'list-item-metadata';
+
+        const metadataParts = [];
+        if (pdf.size) {
+            metadataParts.push(formatFileSize(pdf.size));
+        }
+        if (pdf.pages) {
+            metadataParts.push(`${pdf.pages} page${pdf.pages !== 1 ? 's' : ''}`);
+        }
+
+        metadata.textContent = metadataParts.join(' • ');
+
         const actions = document.createElement('div');
         actions.className = 'list-item-actions';
 
@@ -254,6 +280,7 @@ function renderPdfs() {
 
         pdfItem.addEventListener('click', () => viewPdf(selectedFolder, pdf.name));
         pdfItem.appendChild(pdfName);
+        pdfItem.appendChild(metadata);
         pdfItem.appendChild(actions);
         pdfListElement.appendChild(pdfItem);
     });

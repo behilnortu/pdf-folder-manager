@@ -5,6 +5,7 @@ const fsSync = require('fs');
 const chokidar = require('chokidar');
 const multer = require('multer');
 const archiver = require('archiver');
+const pdfParse = require('pdf-parse');
 
 const app = express();
 const PORT = 3000;
@@ -99,6 +100,18 @@ function generateBookmarkId() {
     return Date.now() + '-' + Math.random().toString(36).substr(2, 9);
 }
 
+// Helper function to get PDF page count
+async function getPdfPageCount(filePath) {
+    try {
+        const dataBuffer = await fs.readFile(filePath);
+        const data = await pdfParse(dataBuffer);
+        return data.numpages;
+    } catch (err) {
+        console.error(`Error getting page count for ${filePath}:`, err.message);
+        return null; // Return null if we can't get page count
+    }
+}
+
 // Function to scan PDF directory and build structure
 async function scanPdfDirectory() {
     const newStructure = {};
@@ -124,11 +137,13 @@ async function scanPdfDirectory() {
                         if (file.toLowerCase().endsWith('.pdf')) {
                             const filePath = path.join(folderPath, file);
                             const fileStats = await fs.stat(filePath);
+                            const pageCount = await getPdfPageCount(filePath);
 
                             newStructure[folder].pdfs.push({
                                 name: file,
                                 size: fileStats.size,
-                                mtime: fileStats.mtime
+                                mtime: fileStats.mtime,
+                                pages: pageCount
                             });
                         }
                     }
