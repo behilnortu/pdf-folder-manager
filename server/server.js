@@ -111,14 +111,25 @@ async function scanPdfDirectory() {
             const stats = await fs.stat(folderPath);
 
             if (stats.isDirectory()) {
-                newStructure[folder] = [];
+                newStructure[folder] = {
+                    name: folder,
+                    mtime: stats.mtime,
+                    pdfs: []
+                };
 
                 try {
                     const files = await fs.readdir(folderPath);
 
                     for (const file of files) {
                         if (file.toLowerCase().endsWith('.pdf')) {
-                            newStructure[folder].push(file);
+                            const filePath = path.join(folderPath, file);
+                            const fileStats = await fs.stat(filePath);
+
+                            newStructure[folder].pdfs.push({
+                                name: file,
+                                size: fileStats.size,
+                                mtime: fileStats.mtime
+                            });
                         }
                     }
                 } catch (err) {
@@ -170,14 +181,15 @@ app.use(express.static(path.join(__dirname, '../public')));
 
 // API endpoint to get folder structure
 app.get('/api/folders', (req, res) => {
-    const folders = Object.keys(fileStructure);
+    const folders = Object.values(fileStructure);
     res.json({ folders });
 });
 
 // API endpoint to get PDFs in a specific folder
 app.get('/api/folders/:folderName/pdfs', (req, res) => {
     const folderName = req.params.folderName;
-    const pdfs = fileStructure[folderName] || [];
+    const folderData = fileStructure[folderName];
+    const pdfs = folderData ? folderData.pdfs : [];
     res.json({ pdfs });
 });
 

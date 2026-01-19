@@ -534,6 +534,23 @@ body {
     border-color: #3498db;
 }
 
+/* Sort select */
+.sort-select {
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    font-size: 14px;
+    width: 100%;
+    background-color: #fff;
+    cursor: pointer;
+    font-family: Garamond, 'Hoefler Text', 'Times New Roman', serif;
+}
+
+.sort-select:focus {
+    outline: none;
+    border-color: #3498db;
+}
+
 /* Modal */
 .modal {
     display: none;

@@ -12,6 +12,12 @@
         <aside class="sidebar left-sidebar" id="left-sidebar">
             <h2>Folders</h2>
             <div class="toolbar">
+                <select id="folder-sort-select" class="sort-select">
+                    <option value="name-asc">Name (A-Z)</option>
+                    <option value="name-desc">Name (Z-A)</option>
+                    <option value="date-desc">Newest First</option>
+                    <option value="date-asc">Oldest First</option>
+                </select>
                 <button id="new-folder-btn" class="btn btn-primary" title="Create new folder">+ New Folder</button>
                 <button id="trash-btn" class="btn btn-secondary" title="View trash">🗑️ Trash <span id="trash-count" class="trash-count"></span></button>
             </div>
@@ -55,6 +61,14 @@
         <aside class="sidebar right-sidebar" id="right-sidebar">
             <h2>PDFs</h2>
             <div class="toolbar">
+                <select id="pdf-sort-select" class="sort-select">
+                    <option value="name-asc">Name (A-Z)</option>
+                    <option value="name-desc">Name (Z-A)</option>
+                    <option value="date-desc">Newest First</option>
+                    <option value="date-asc">Oldest First</option>
+                    <option value="size-desc">Largest First</option>
+                    <option value="size-asc">Smallest First</option>
+                </select>
                 <input type="text" id="search-input" class="search-input" placeholder="Search PDFs...">
                 <button id="upload-pdf-btn" class="btn btn-primary" title="Upload PDF">+ Upload PDF</button>
             </div>
@@ -124,7 +138,7 @@
         <div class="modal-content">
             <h3>Add Bookmark</h3>
             <p id="bookmark-pdf-info" style="margin-bottom: 15px; color: #666;"></p>
-            <input type="number" id="bookmark-page-input" class="modal-input" placeholder="Page number" min="1">
+            <input type="number" id="bookmark-page-input" class="modal-input" placeholder="Specify the pdf page number" min="1">
             <input type="text" id="bookmark-label-input" class="modal-input" placeholder="Bookmark label (optional)">
             <div class="modal-actions">
                 <button id="bookmark-save-btn" class="btn btn-success">Save Bookmark</button>

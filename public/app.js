@@ -9,6 +9,8 @@ let renameTarget = null; // name of folder or pdf to rename
 let movePdfTarget = null; // name of pdf to move
 let currentViewingFolder = null; // currently viewing PDF folder
 let currentViewingPdf = null; // currently viewing PDF name
+let folderSortPreference = localStorage.getItem('folderSort') || 'name-asc';
+let pdfSortPreference = localStorage.getItem('pdfSort') || 'name-asc';
 
 // DOM elements
 const folderListElement = document.getElementById('folder-list');
@@ -54,6 +56,30 @@ const bookmarkCancelBtn = document.getElementById('bookmark-cancel-btn');
 const bookmarksViewModal = document.getElementById('bookmarks-view-modal');
 const bookmarksList = document.getElementById('bookmarks-list');
 const closeBookmarksBtn = document.getElementById('close-bookmarks-btn');
+const folderSortSelect = document.getElementById('folder-sort-select');
+const pdfSortSelect = document.getElementById('pdf-sort-select');
+
+// Sorting functions
+function sortItems(items, sortBy) {
+    const sorted = [...items];
+
+    switch(sortBy) {
+        case 'name-asc':
+            return sorted.sort((a, b) => a.name.localeCompare(b.name));
+        case 'name-desc':
+            return sorted.sort((a, b) => b.name.localeCompare(a.name));
+        case 'date-asc':
+            return sorted.sort((a, b) => new Date(a.mtime) - new Date(b.mtime));
+        case 'date-desc':
+            return sorted.sort((a, b) => new Date(b.mtime) - new Date(a.mtime));
+        case 'size-asc':
+            return sorted.sort((a, b) => a.size - b.size);
+        case 'size-desc':
+            return sorted.sort((a, b) => b.size - a.size);
+        default:
+            return sorted;
+    }
+}
 
 // Load folders from API
 async function loadFolders() {
@@ -77,13 +103,15 @@ function renderFolders() {
 
     folderListElement.innerHTML = '';
 
-    folders.forEach(folder => {
+    const sortedFolders = sortItems(folders, folderSortPreference);
+
+    sortedFolders.forEach(folder => {
         const folderItem = document.createElement('div');
         folderItem.className = 'list-item';
 
         const folderName = document.createElement('span');
         folderName.className = 'list-item-name';
-        folderName.textContent = folder;
+        folderName.textContent = folder.name;
 
         const actions = document.createElement('div');
         actions.className = 'list-item-actions';
@@ -94,7 +122,7 @@ function renderFolders() {
         renameBtn.title = 'Rename folder';
         renameBtn.onclick = (e) => {
             e.stopPropagation();
-            showRenameModal('folder', folder);
+            showRenameModal('folder', folder.name);
         };
 
         const exportBtn = document.createElement('button');
@@ -103,7 +131,7 @@ function renderFolders() {
         exportBtn.title = 'Export folder as ZIP';
         exportBtn.onclick = (e) => {
             e.stopPropagation();
-            exportFolder(folder);
+            exportFolder(folder.name);
         };
 
         const deleteBtn = document.createElement('button');
@@ -112,18 +140,18 @@ function renderFolders() {
         deleteBtn.title = 'Delete folder';
         deleteBtn.onclick = (e) => {
             e.stopPropagation();
-            deleteFolder(folder);
+            deleteFolder(folder.name);
         };
 
         actions.appendChild(renameBtn);
         actions.appendChild(exportBtn);
         actions.appendChild(deleteBtn);
 
-        if (folder === selectedFolder) {
+        if (folder.name === selectedFolder) {
             folderItem.classList.add('active');
         }
 
-        folderItem.addEventListener('click', () => selectFolder(folder));
+        folderItem.addEventListener('click', () => selectFolder(folder.name));
         folderItem.appendChild(folderName);
         folderItem.appendChild(actions);
         folderListElement.appendChild(folderItem);
@@ -155,7 +183,7 @@ function filterPdfs() {
     } else {
         const query = searchQuery.toLowerCase();
         filteredPdfs = currentPdfs.filter(pdf =>
-            pdf.toLowerCase().includes(query)
+            pdf.name.toLowerCase().includes(query)
         );
     }
     renderPdfs();
@@ -180,13 +208,15 @@ function renderPdfs() {
 
     pdfListElement.innerHTML = '';
 
-    filteredPdfs.forEach(pdf => {
+    const sortedPdfs = sortItems(filteredPdfs, pdfSortPreference);
+
+    sortedPdfs.forEach(pdf => {
         const pdfItem = document.createElement('div');
         pdfItem.className = 'list-item';
 
         const pdfName = document.createElement('span');
         pdfName.className = 'list-item-name';
-        pdfName.textContent = pdf;
+        pdfName.textContent = pdf.name;
 
         const actions = document.createElement('div');
         actions.className = 'list-item-actions';
@@ -197,7 +227,7 @@ function renderPdfs() {
         renameBtn.title = 'Rename PDF';
         renameBtn.onclick = (e) => {
             e.stopPropagation();
-            showRenameModal('pdf', pdf);
+            showRenameModal('pdf', pdf.name);
         };
 
         const moveBtn = document.createElement('button');
@@ -206,7 +236,7 @@ function renderPdfs() {
         moveBtn.title = 'Move PDF to another folder';
         moveBtn.onclick = (e) => {
             e.stopPropagation();
-            showMoveModal(pdf);
+            showMoveModal(pdf.name);
         };
 
         const deleteBtn = document.createElement('button');
@@ -215,14 +245,14 @@ function renderPdfs() {
         deleteBtn.title = 'Delete PDF';
         deleteBtn.onclick = (e) => {
             e.stopPropagation();
-            deletePdf(pdf);
+            deletePdf(pdf.name);
         };
 
         actions.appendChild(renameBtn);
         actions.appendChild(moveBtn);
         actions.appendChild(deleteBtn);
 
-        pdfItem.addEventListener('click', () => viewPdf(selectedFolder, pdf));
+        pdfItem.addEventListener('click', () => viewPdf(selectedFolder, pdf.name));
         pdfItem.appendChild(pdfName);
         pdfItem.appendChild(actions);
         pdfListElement.appendChild(pdfItem);
@@ -487,10 +517,10 @@ function showMoveModal(pdfName) {
     // Populate folder dropdown with all folders except the current one
     moveFolderSelect.innerHTML = '<option value="">Select destination folder...</option>';
     folders.forEach(folder => {
-        if (folder !== selectedFolder) {
+        if (folder.name !== selectedFolder) {
             const option = document.createElement('option');
-            option.value = folder;
-            option.textContent = folder;
+            option.value = folder.name;
+            option.textContent = folder.name;
             moveFolderSelect.appendChild(option);
         }
     });
@@ -814,7 +844,7 @@ function showAddBookmarkModal() {
     }
 
     bookmarkPdfInfo.textContent = `PDF: ${currentViewingPdf}`;
-    bookmarkPageInput.value = '1';
+    bookmarkPageInput.value = '';
     bookmarkLabelInput.value = '';
 
     bookmarkModal.classList.add('show');
@@ -1111,6 +1141,22 @@ trashModal.addEventListener('click', (e) => {
     if (e.target === trashModal) {
         hideTrashModal();
     }
+});
+
+// Sort event listeners
+folderSortSelect.value = folderSortPreference;
+pdfSortSelect.value = pdfSortPreference;
+
+folderSortSelect.addEventListener('change', (e) => {
+    folderSortPreference = e.target.value;
+    localStorage.setItem('folderSort', folderSortPreference);
+    renderFolders();
+});
+
+pdfSortSelect.addEventListener('change', (e) => {
+    pdfSortPreference = e.target.value;
+    localStorage.setItem('pdfSort', pdfSortPreference);
+    renderPdfs();
 });
 
 // Sidebar resize functionality
