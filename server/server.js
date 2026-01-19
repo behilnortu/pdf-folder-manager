@@ -11,6 +11,7 @@ const PORT = 3000;
 const PDF_DIR = path.join(__dirname, '../pdfs');
 const TRASH_DIR = path.join(__dirname, '../.trash');
 const TRASH_METADATA = path.join(TRASH_DIR, 'metadata.json');
+const BOOKMARKS_FILE = path.join(__dirname, '../.bookmarks.json');
 
 // Configure multer for file uploads
 const storage = multer.diskStorage({
@@ -70,6 +71,31 @@ async function saveTrashMetadata(metadata) {
 }
 
 function generateTrashId() {
+    return Date.now() + '-' + Math.random().toString(36).substr(2, 9);
+}
+
+// Bookmark helpers
+async function loadBookmarks() {
+    try {
+        if (fsSync.existsSync(BOOKMARKS_FILE)) {
+            const data = await fs.readFile(BOOKMARKS_FILE, 'utf8');
+            return JSON.parse(data);
+        }
+    } catch (err) {
+        console.error('Error loading bookmarks:', err);
+    }
+    return [];
+}
+
+async function saveBookmarks(bookmarks) {
+    try {
+        await fs.writeFile(BOOKMARKS_FILE, JSON.stringify(bookmarks, null, 2));
+    } catch (err) {
+        console.error('Error saving bookmarks:', err);
+    }
+}
+
+function generateBookmarkId() {
     return Date.now() + '-' + Math.random().toString(36).substr(2, 9);
 }
 
@@ -388,6 +414,85 @@ app.get('/api/folders/:folderName/export', async (req, res) => {
         if (!res.headersSent) {
             res.status(500).json({ error: 'Failed to export folder' });
         }
+    }
+});
+
+// API endpoint to get all bookmarks
+app.get('/api/bookmarks', async (req, res) => {
+    try {
+        const bookmarks = await loadBookmarks();
+        res.json({ bookmarks });
+    } catch (err) {
+        console.error('Error getting bookmarks:', err);
+        res.status(500).json({ error: 'Failed to get bookmarks' });
+    }
+});
+
+// API endpoint to get bookmarks for a specific PDF
+app.get('/api/bookmarks/:folderName/:pdfName', async (req, res) => {
+    const folderName = req.params.folderName;
+    const pdfName = req.params.pdfName;
+
+    try {
+        const allBookmarks = await loadBookmarks();
+        const pdfBookmarks = allBookmarks.filter(
+            b => b.folderName === folderName && b.pdfName === pdfName
+        );
+        res.json({ bookmarks: pdfBookmarks });
+    } catch (err) {
+        console.error('Error getting PDF bookmarks:', err);
+        res.status(500).json({ error: 'Failed to get bookmarks' });
+    }
+});
+
+// API endpoint to create a bookmark
+app.post('/api/bookmarks', async (req, res) => {
+    const { folderName, pdfName, pageNumber, label } = req.body;
+
+    if (!folderName || !pdfName || pageNumber === undefined) {
+        return res.status(400).json({ error: 'Folder name, PDF name, and page number are required' });
+    }
+
+    try {
+        const bookmarks = await loadBookmarks();
+        const newBookmark = {
+            id: generateBookmarkId(),
+            folderName,
+            pdfName,
+            pageNumber: parseInt(pageNumber),
+            label: label || `Page ${pageNumber}`,
+            createdAt: new Date().toISOString()
+        };
+
+        bookmarks.push(newBookmark);
+        await saveBookmarks(bookmarks);
+
+        res.json({ success: true, bookmark: newBookmark });
+    } catch (err) {
+        console.error('Error creating bookmark:', err);
+        res.status(500).json({ error: 'Failed to create bookmark' });
+    }
+});
+
+// API endpoint to delete a bookmark
+app.delete('/api/bookmarks/:id', async (req, res) => {
+    const bookmarkId = req.params.id;
+
+    try {
+        const bookmarks = await loadBookmarks();
+        const bookmarkIndex = bookmarks.findIndex(b => b.id === bookmarkId);
+
+        if (bookmarkIndex === -1) {
+            return res.status(404).json({ error: 'Bookmark not found' });
+        }
+
+        bookmarks.splice(bookmarkIndex, 1);
+        await saveBookmarks(bookmarks);
+
+        res.json({ success: true, message: 'Bookmark deleted' });
+    } catch (err) {
+        console.error('Error deleting bookmark:', err);
+        res.status(500).json({ error: 'Failed to delete bookmark' });
     }
 });
 

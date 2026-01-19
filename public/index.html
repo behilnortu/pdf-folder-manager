@@ -26,6 +26,10 @@
         <!-- Main Section: PDF Viewer -->
         <main class="main-section" id="main-section">
             <div class="main-toolbar">
+                <div class="toolbar-left">
+                    <button id="add-bookmark-btn" class="btn btn-primary btn-sm" style="display: none;" title="Bookmark current page">🔖 Add Bookmark</button>
+                    <button id="view-bookmarks-btn" class="btn btn-secondary btn-sm" style="display: none;" title="View all bookmarks">📚 Bookmarks</button>
+                </div>
                 <button id="clear-pdf-btn" class="btn btn-secondary btn-sm" style="display: none;">✕ Clear PDF</button>
             </div>
             <div id="pdf-viewer" class="pdf-viewer">
@@ -104,6 +108,35 @@
             <div class="modal-actions">
                 <button id="move-confirm-btn" class="btn btn-success">Move</button>
                 <button id="move-cancel-btn" class="btn btn-secondary">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal for adding bookmark -->
+    <div id="bookmark-modal" class="modal">
+        <div class="modal-content">
+            <h3>Add Bookmark</h3>
+            <p id="bookmark-pdf-info" style="margin-bottom: 15px; color: #666;"></p>
+            <input type="number" id="bookmark-page-input" class="modal-input" placeholder="Page number" min="1">
+            <input type="text" id="bookmark-label-input" class="modal-input" placeholder="Bookmark label (optional)">
+            <div class="modal-actions">
+                <button id="bookmark-save-btn" class="btn btn-success">Save Bookmark</button>
+                <button id="bookmark-cancel-btn" class="btn btn-secondary">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal for viewing bookmarks -->
+    <div id="bookmarks-view-modal" class="modal">
+        <div class="modal-content modal-large">
+            <div class="modal-header">
+                <h3>📚 Bookmarks</h3>
+            </div>
+            <div id="bookmarks-list" class="trash-list">
+                <p class="empty-message">No bookmarks yet</p>
+            </div>
+            <div class="modal-actions">
+                <button id="close-bookmarks-btn" class="btn btn-secondary">Close</button>
             </div>
         </div>
     </div>

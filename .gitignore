@@ -4,6 +4,7 @@ node_modules/
 # User data
 pdfs/
 .trash/
+.bookmarks.json
 
 # System files
 .DS_Store

@@ -7,6 +7,8 @@ let searchQuery = '';
 let renameType = null; // 'folder' or 'pdf'
 let renameTarget = null; // name of folder or pdf to rename
 let movePdfTarget = null; // name of pdf to move
+let currentViewingFolder = null; // currently viewing PDF folder
+let currentViewingPdf = null; // currently viewing PDF name
 
 // DOM elements
 const folderListElement = document.getElementById('folder-list');
@@ -41,6 +43,17 @@ const movePdfName = document.getElementById('move-pdf-name');
 const moveFolderSelect = document.getElementById('move-folder-select');
 const moveConfirmBtn = document.getElementById('move-confirm-btn');
 const moveCancelBtn = document.getElementById('move-cancel-btn');
+const addBookmarkBtn = document.getElementById('add-bookmark-btn');
+const viewBookmarksBtn = document.getElementById('view-bookmarks-btn');
+const bookmarkModal = document.getElementById('bookmark-modal');
+const bookmarkPdfInfo = document.getElementById('bookmark-pdf-info');
+const bookmarkPageInput = document.getElementById('bookmark-page-input');
+const bookmarkLabelInput = document.getElementById('bookmark-label-input');
+const bookmarkSaveBtn = document.getElementById('bookmark-save-btn');
+const bookmarkCancelBtn = document.getElementById('bookmark-cancel-btn');
+const bookmarksViewModal = document.getElementById('bookmarks-view-modal');
+const bookmarksList = document.getElementById('bookmarks-list');
+const closeBookmarksBtn = document.getElementById('close-bookmarks-btn');
 
 // Load folders from API
 async function loadFolders() {
@@ -221,11 +234,17 @@ function viewPdf(folderName, pdfName) {
     const pdfUrl = `/api/pdf/${encodeURIComponent(folderName)}/${encodeURIComponent(pdfName)}`;
 
     pdfViewerElement.innerHTML = `
-        <iframe src="${pdfUrl}" type="application/pdf"></iframe>
+        <iframe id="pdf-iframe" src="${pdfUrl}" type="application/pdf"></iframe>
     `;
 
-    // Show clear button when PDF is loaded
+    // Track current viewing PDF
+    currentViewingFolder = folderName;
+    currentViewingPdf = pdfName;
+
+    // Show toolbar buttons when PDF is loaded
     clearPdfBtn.style.display = 'block';
+    addBookmarkBtn.style.display = 'block';
+    viewBookmarksBtn.style.display = 'block';
 }
 
 // Clear the PDF viewer
@@ -238,8 +257,14 @@ function clearPdf() {
         </div>
     `;
 
-    // Hide clear button
+    // Clear current viewing state
+    currentViewingFolder = null;
+    currentViewingPdf = null;
+
+    // Hide toolbar buttons
     clearPdfBtn.style.display = 'none';
+    addBookmarkBtn.style.display = 'none';
+    viewBookmarksBtn.style.display = 'none';
 }
 
 // Poll for updates every 2 seconds
@@ -781,6 +806,221 @@ async function emptyTrash() {
     }
 }
 
+// Show add bookmark modal
+function showAddBookmarkModal() {
+    if (!currentViewingFolder || !currentViewingPdf) {
+        alert('No PDF is currently being viewed');
+        return;
+    }
+
+    bookmarkPdfInfo.textContent = `PDF: ${currentViewingPdf}`;
+    bookmarkPageInput.value = '1';
+    bookmarkLabelInput.value = '';
+
+    bookmarkModal.classList.add('show');
+    bookmarkPageInput.focus();
+}
+
+// Hide add bookmark modal
+function hideAddBookmarkModal() {
+    bookmarkModal.classList.remove('show');
+    bookmarkPageInput.value = '';
+    bookmarkLabelInput.value = '';
+}
+
+// Save bookmark
+async function saveBookmark() {
+    const pageNumber = parseInt(bookmarkPageInput.value);
+    const label = bookmarkLabelInput.value.trim();
+
+    if (!pageNumber || pageNumber < 1) {
+        alert('Please enter a valid page number');
+        return;
+    }
+
+    if (!currentViewingFolder || !currentViewingPdf) {
+        alert('No PDF is currently being viewed');
+        return;
+    }
+
+    try {
+        const response = await fetch('/api/bookmarks', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                folderName: currentViewingFolder,
+                pdfName: currentViewingPdf,
+                pageNumber: pageNumber,
+                label: label || `Page ${pageNumber}`
+            })
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+            hideAddBookmarkModal();
+            alert(`Bookmark added for page ${pageNumber}`);
+        } else {
+            alert(data.error || 'Failed to add bookmark');
+        }
+    } catch (error) {
+        console.error('Error adding bookmark:', error);
+        alert('Failed to add bookmark');
+    }
+}
+
+// Show bookmarks view modal
+async function showBookmarksViewModal() {
+    await loadAndRenderBookmarks();
+    bookmarksViewModal.classList.add('show');
+}
+
+// Hide bookmarks view modal
+function hideBookmarksViewModal() {
+    bookmarksViewModal.classList.remove('show');
+}
+
+// Load and render all bookmarks
+async function loadAndRenderBookmarks() {
+    try {
+        const response = await fetch('/api/bookmarks');
+        const data = await response.json();
+        renderBookmarks(data.bookmarks);
+    } catch (error) {
+        console.error('Error loading bookmarks:', error);
+        bookmarksList.innerHTML = '<p class="empty-message">Error loading bookmarks</p>';
+    }
+}
+
+// Render bookmarks list
+function renderBookmarks(bookmarks) {
+    if (bookmarks.length === 0) {
+        bookmarksList.innerHTML = '<p class="empty-message">No bookmarks yet</p>';
+        return;
+    }
+
+    bookmarksList.innerHTML = '';
+
+    // Group bookmarks by folder and PDF
+    const grouped = {};
+    bookmarks.forEach(bookmark => {
+        const key = `${bookmark.folderName}/${bookmark.pdfName}`;
+        if (!grouped[key]) {
+            grouped[key] = {
+                folderName: bookmark.folderName,
+                pdfName: bookmark.pdfName,
+                bookmarks: []
+            };
+        }
+        grouped[key].bookmarks.push(bookmark);
+    });
+
+    // Render grouped bookmarks
+    Object.values(grouped).forEach(group => {
+        const groupDiv = document.createElement('div');
+        groupDiv.className = 'bookmark-group';
+
+        const groupHeader = document.createElement('div');
+        groupHeader.className = 'bookmark-group-header';
+        groupHeader.textContent = `📁 ${group.folderName} / 📄 ${group.pdfName}`;
+        groupDiv.appendChild(groupHeader);
+
+        group.bookmarks.forEach(bookmark => {
+            const bookmarkItem = document.createElement('div');
+            bookmarkItem.className = 'trash-item';
+
+            const itemInfo = document.createElement('div');
+            itemInfo.className = 'trash-item-info';
+
+            const itemName = document.createElement('span');
+            itemName.className = 'trash-item-name';
+            itemName.textContent = `${bookmark.label}`;
+
+            const itemMeta = document.createElement('div');
+            itemMeta.className = 'trash-item-meta';
+            itemMeta.textContent = `Page ${bookmark.pageNumber} • Created ${new Date(bookmark.createdAt).toLocaleString()}`;
+
+            itemInfo.appendChild(itemName);
+            itemInfo.appendChild(itemMeta);
+
+            const actions = document.createElement('div');
+            actions.className = 'trash-item-actions';
+
+            const jumpBtn = document.createElement('button');
+            jumpBtn.className = 'btn btn-primary';
+            jumpBtn.textContent = 'Jump to Page';
+            jumpBtn.onclick = () => jumpToBookmark(bookmark);
+
+            const deleteBtn = document.createElement('button');
+            deleteBtn.className = 'btn btn-danger';
+            deleteBtn.textContent = 'Delete';
+            deleteBtn.onclick = () => deleteBookmark(bookmark.id);
+
+            actions.appendChild(jumpBtn);
+            actions.appendChild(deleteBtn);
+
+            bookmarkItem.appendChild(itemInfo);
+            bookmarkItem.appendChild(actions);
+            groupDiv.appendChild(bookmarkItem);
+        });
+
+        bookmarksList.appendChild(groupDiv);
+    });
+}
+
+// Jump to bookmark (open PDF at specific page)
+function jumpToBookmark(bookmark) {
+    // Select the folder if not already selected
+    if (selectedFolder !== bookmark.folderName) {
+        selectFolder(bookmark.folderName);
+    }
+
+    // View the PDF with page parameter
+    const pdfUrl = `/api/pdf/${encodeURIComponent(bookmark.folderName)}/${encodeURIComponent(bookmark.pdfName)}#page=${bookmark.pageNumber}`;
+
+    pdfViewerElement.innerHTML = `
+        <iframe id="pdf-iframe" src="${pdfUrl}" type="application/pdf"></iframe>
+    `;
+
+    // Track current viewing PDF
+    currentViewingFolder = bookmark.folderName;
+    currentViewingPdf = bookmark.pdfName;
+
+    // Show toolbar buttons
+    clearPdfBtn.style.display = 'block';
+    addBookmarkBtn.style.display = 'block';
+    viewBookmarksBtn.style.display = 'block';
+
+    // Close the bookmarks modal
+    hideBookmarksViewModal();
+}
+
+// Delete bookmark
+async function deleteBookmark(bookmarkId) {
+    if (!confirm('Are you sure you want to delete this bookmark?')) {
+        return;
+    }
+
+    try {
+        const response = await fetch(`/api/bookmarks/${bookmarkId}`, {
+            method: 'DELETE'
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+            await loadAndRenderBookmarks();
+        } else {
+            alert(data.error || 'Failed to delete bookmark');
+        }
+    } catch (error) {
+        console.error('Error deleting bookmark:', error);
+        alert('Failed to delete bookmark');
+    }
+}
+
 // Event listeners
 searchInput.addEventListener('input', (e) => {
     searchQuery = e.target.value;
@@ -838,6 +1078,27 @@ moveConfirmBtn.addEventListener('click', performMovePdf);
 moveModal.addEventListener('click', (e) => {
     if (e.target === moveModal) {
         hideMoveModal();
+    }
+});
+
+// Bookmark modal event listeners
+addBookmarkBtn.addEventListener('click', showAddBookmarkModal);
+bookmarkCancelBtn.addEventListener('click', hideAddBookmarkModal);
+bookmarkSaveBtn.addEventListener('click', saveBookmark);
+
+bookmarkModal.addEventListener('click', (e) => {
+    if (e.target === bookmarkModal) {
+        hideAddBookmarkModal();
+    }
+});
+
+// Bookmarks view modal event listeners
+viewBookmarksBtn.addEventListener('click', showBookmarksViewModal);
+closeBookmarksBtn.addEventListener('click', hideBookmarksViewModal);
+
+bookmarksViewModal.addEventListener('click', (e) => {
+    if (e.target === bookmarksViewModal) {
+        hideBookmarksViewModal();
     }
 });
 
