@@ -4,6 +4,8 @@ let folders = [];
 let currentPdfs = [];
 let filteredPdfs = [];
 let searchQuery = '';
+let renameType = null; // 'folder' or 'pdf'
+let renameTarget = null; // name of folder or pdf to rename
 
 // DOM elements
 const folderListElement = document.getElementById('folder-list');
@@ -17,6 +19,21 @@ const folderModal = document.getElementById('folder-modal');
 const folderNameInput = document.getElementById('folder-name-input');
 const createFolderBtn = document.getElementById('create-folder-btn');
 const cancelFolderBtn = document.getElementById('cancel-folder-btn');
+const renameModal = document.getElementById('rename-modal');
+const renameModalTitle = document.getElementById('rename-modal-title');
+const renameInput = document.getElementById('rename-input');
+const renameConfirmBtn = document.getElementById('rename-confirm-btn');
+const renameCancelBtn = document.getElementById('rename-cancel-btn');
+const trashBtn = document.getElementById('trash-btn');
+const trashModal = document.getElementById('trash-modal');
+const trashList = document.getElementById('trash-list');
+const closeTrashBtn = document.getElementById('close-trash-btn');
+const emptyTrashBtn = document.getElementById('empty-trash-btn');
+const trashCountBadge = document.getElementById('trash-count');
+const leftSidebar = document.getElementById('left-sidebar');
+const rightSidebar = document.getElementById('right-sidebar');
+const leftResizeHandle = document.getElementById('left-resize-handle');
+const rightResizeHandle = document.getElementById('right-resize-handle');
 
 // Load folders from API
 async function loadFolders() {
@@ -43,13 +60,40 @@ function renderFolders() {
     folders.forEach(folder => {
         const folderItem = document.createElement('div');
         folderItem.className = 'list-item';
-        folderItem.textContent = folder;
+
+        const folderName = document.createElement('span');
+        folderName.className = 'list-item-name';
+        folderName.textContent = folder;
+
+        const actions = document.createElement('div');
+        actions.className = 'list-item-actions';
+
+        const renameBtn = document.createElement('button');
+        renameBtn.className = 'rename-btn';
+        renameBtn.textContent = 'Rename';
+        renameBtn.onclick = (e) => {
+            e.stopPropagation();
+            showRenameModal('folder', folder);
+        };
+
+        const deleteBtn = document.createElement('button');
+        deleteBtn.className = 'delete-btn';
+        deleteBtn.textContent = 'Delete';
+        deleteBtn.onclick = (e) => {
+            e.stopPropagation();
+            deleteFolder(folder);
+        };
+
+        actions.appendChild(renameBtn);
+        actions.appendChild(deleteBtn);
 
         if (folder === selectedFolder) {
             folderItem.classList.add('active');
         }
 
         folderItem.addEventListener('click', () => selectFolder(folder));
+        folderItem.appendChild(folderName);
+        folderItem.appendChild(actions);
         folderListElement.appendChild(folderItem);
     });
 }
@@ -107,8 +151,36 @@ function renderPdfs() {
     filteredPdfs.forEach(pdf => {
         const pdfItem = document.createElement('div');
         pdfItem.className = 'list-item';
-        pdfItem.textContent = pdf;
+
+        const pdfName = document.createElement('span');
+        pdfName.className = 'list-item-name';
+        pdfName.textContent = pdf;
+
+        const actions = document.createElement('div');
+        actions.className = 'list-item-actions';
+
+        const renameBtn = document.createElement('button');
+        renameBtn.className = 'rename-btn';
+        renameBtn.textContent = 'Rename';
+        renameBtn.onclick = (e) => {
+            e.stopPropagation();
+            showRenameModal('pdf', pdf);
+        };
+
+        const deleteBtn = document.createElement('button');
+        deleteBtn.className = 'delete-btn';
+        deleteBtn.textContent = 'Delete';
+        deleteBtn.onclick = (e) => {
+            e.stopPropagation();
+            deletePdf(pdf);
+        };
+
+        actions.appendChild(renameBtn);
+        actions.appendChild(deleteBtn);
+
         pdfItem.addEventListener('click', () => viewPdf(selectedFolder, pdf));
+        pdfItem.appendChild(pdfName);
+        pdfItem.appendChild(actions);
         pdfListElement.appendChild(pdfItem);
     });
 }
@@ -224,6 +296,372 @@ async function uploadPdfs() {
     }
 }
 
+// Show rename modal
+function showRenameModal(type, name) {
+    renameType = type;
+    renameTarget = name;
+
+    if (type === 'folder') {
+        renameModalTitle.textContent = 'Rename Folder';
+        renameInput.placeholder = 'Enter new folder name';
+    } else {
+        renameModalTitle.textContent = 'Rename PDF';
+        renameInput.placeholder = 'Enter new PDF name';
+    }
+
+    // Pre-fill with current name (without .pdf extension for PDFs)
+    if (type === 'pdf' && name.toLowerCase().endsWith('.pdf')) {
+        renameInput.value = name.substring(0, name.length - 4);
+    } else {
+        renameInput.value = name;
+    }
+
+    renameModal.classList.add('show');
+    renameInput.focus();
+    renameInput.select();
+}
+
+// Hide rename modal
+function hideRenameModal() {
+    renameModal.classList.remove('show');
+    renameInput.value = '';
+    renameType = null;
+    renameTarget = null;
+}
+
+// Perform rename
+async function performRename() {
+    const newName = renameInput.value.trim();
+
+    if (!newName) {
+        alert('Please enter a name');
+        return;
+    }
+
+    if (renameType === 'folder') {
+        await renameFolder(renameTarget, newName);
+    } else if (renameType === 'pdf') {
+        await renamePdf(renameTarget, newName);
+    }
+}
+
+// Rename folder
+async function renameFolder(oldName, newName) {
+    try {
+        const response = await fetch(`/api/folders/${encodeURIComponent(oldName)}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ newFolderName: newName })
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+            hideRenameModal();
+            await loadFolders();
+
+            // If the renamed folder was selected, update selection
+            if (selectedFolder === oldName) {
+                selectedFolder = data.newFolderName;
+                await selectFolder(data.newFolderName);
+            }
+        } else {
+            alert(data.error || 'Failed to rename folder');
+        }
+    } catch (error) {
+        console.error('Error renaming folder:', error);
+        alert('Failed to rename folder');
+    }
+}
+
+// Rename PDF
+async function renamePdf(oldName, newName) {
+    if (!selectedFolder) {
+        alert('No folder selected');
+        return;
+    }
+
+    try {
+        const response = await fetch(`/api/folders/${encodeURIComponent(selectedFolder)}/pdf/${encodeURIComponent(oldName)}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ newPdfName: newName })
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+            hideRenameModal();
+            await selectFolder(selectedFolder);
+        } else {
+            alert(data.error || 'Failed to rename PDF');
+        }
+    } catch (error) {
+        console.error('Error renaming PDF:', error);
+        alert('Failed to rename PDF');
+    }
+}
+
+// Delete folder with confirmation
+async function deleteFolder(folderName) {
+    try {
+        // Get PDF count for the folder
+        const response = await fetch(`/api/folders/${encodeURIComponent(folderName)}/pdfs`);
+        const data = await response.json();
+        const pdfCount = data.pdfs ? data.pdfs.length : 0;
+
+        let confirmMessage = `Are you sure you want to delete the folder "${folderName}"?`;
+        if (pdfCount > 0) {
+            confirmMessage = `⚠️ Warning: Deleting the folder "${folderName}" will permanently delete all ${pdfCount} PDF(s) inside it.\n\nThis action cannot be undone. Are you sure you want to continue?`;
+        }
+
+        if (!confirm(confirmMessage)) {
+            return;
+        }
+    } catch (error) {
+        console.error('Error checking folder contents:', error);
+        if (!confirm(`Are you sure you want to delete the folder "${folderName}"?\n\n⚠️ Warning: This will delete all PDFs inside the folder.\n\nThis action cannot be undone.`)) {
+            return;
+        }
+    }
+
+    try {
+        const response = await fetch(`/api/folders/${encodeURIComponent(folderName)}`, {
+            method: 'DELETE'
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+            // If deleted folder was selected, clear selection
+            if (selectedFolder === folderName) {
+                selectedFolder = null;
+                pdfListElement.innerHTML = '<p class="empty-message">Select a folder to view PDFs</p>';
+                pdfViewerElement.innerHTML = `
+                    <div class="welcome-message">
+                        <h1>PDF Folder Manager</h1>
+                        <p>Select a folder from the left sidebar to view PDFs</p>
+                        <p>Click on a PDF from the right sidebar to view it here</p>
+                    </div>
+                `;
+            }
+            await loadFolders();
+            await loadTrash(); // Update trash count
+        } else {
+            alert(data.error || 'Failed to delete folder');
+        }
+    } catch (error) {
+        console.error('Error deleting folder:', error);
+        alert('Failed to delete folder');
+    }
+}
+
+// Delete PDF with confirmation
+async function deletePdf(pdfName) {
+    if (!selectedFolder) {
+        alert('No folder selected');
+        return;
+    }
+
+    if (!confirm(`Are you sure you want to delete "${pdfName}"?\n\nThis action cannot be undone.`)) {
+        return;
+    }
+
+    try {
+        const response = await fetch(`/api/folders/${encodeURIComponent(selectedFolder)}/pdf/${encodeURIComponent(pdfName)}`, {
+            method: 'DELETE'
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+            await selectFolder(selectedFolder);
+            await loadTrash(); // Update trash count
+
+            // Clear PDF viewer if the deleted PDF was being viewed
+            pdfViewerElement.innerHTML = `
+                <div class="welcome-message">
+                    <h1>PDF Folder Manager</h1>
+                    <p>Select a folder from the left sidebar to view PDFs</p>
+                    <p>Click on a PDF from the right sidebar to view it here</p>
+                </div>
+            `;
+        } else {
+            alert(data.error || 'Failed to delete PDF');
+        }
+    } catch (error) {
+        console.error('Error deleting PDF:', error);
+        alert('Failed to delete PDF');
+    }
+}
+
+// Load trash items
+async function loadTrash() {
+    try {
+        const response = await fetch('/api/trash');
+        const data = await response.json();
+        updateTrashCount(data.items.length);
+        return data.items;
+    } catch (error) {
+        console.error('Error loading trash:', error);
+        return [];
+    }
+}
+
+// Update trash count badge
+function updateTrashCount(count) {
+    if (count > 0) {
+        trashCountBadge.textContent = count;
+    } else {
+        trashCountBadge.textContent = '';
+    }
+}
+
+// Show trash modal
+async function showTrashModal() {
+    const items = await loadTrash();
+    renderTrash(items);
+    trashModal.classList.add('show');
+}
+
+// Hide trash modal
+function hideTrashModal() {
+    trashModal.classList.remove('show');
+}
+
+// Render trash items
+function renderTrash(items) {
+    if (items.length === 0) {
+        trashList.innerHTML = '<p class="empty-message">Trash is empty</p>';
+        return;
+    }
+
+    trashList.innerHTML = '';
+
+    items.forEach(item => {
+        const trashItem = document.createElement('div');
+        trashItem.className = 'trash-item';
+
+        const itemInfo = document.createElement('div');
+        itemInfo.className = 'trash-item-info';
+
+        const itemName = document.createElement('span');
+        itemName.className = 'trash-item-name';
+        itemName.textContent = item.type === 'folder' ? `📁 ${item.name}` : `📄 ${item.name}`;
+
+        const itemMeta = document.createElement('div');
+        itemMeta.className = 'trash-item-meta';
+        const deletedDate = new Date(item.deletedAt);
+        itemMeta.textContent = `${item.type} • Deleted ${deletedDate.toLocaleString()}`;
+        if (item.folderName) {
+            itemMeta.textContent += ` • From: ${item.folderName}`;
+        }
+
+        itemInfo.appendChild(itemName);
+        itemInfo.appendChild(itemMeta);
+
+        const actions = document.createElement('div');
+        actions.className = 'trash-item-actions';
+
+        const restoreBtn = document.createElement('button');
+        restoreBtn.className = 'btn btn-success';
+        restoreBtn.textContent = 'Restore';
+        restoreBtn.onclick = () => restoreItem(item.id);
+
+        const deleteBtn = document.createElement('button');
+        deleteBtn.className = 'btn btn-danger';
+        deleteBtn.textContent = 'Delete';
+        deleteBtn.onclick = () => permanentlyDeleteItem(item.id, item.name);
+
+        actions.appendChild(restoreBtn);
+        actions.appendChild(deleteBtn);
+
+        trashItem.appendChild(itemInfo);
+        trashItem.appendChild(actions);
+        trashList.appendChild(trashItem);
+    });
+}
+
+// Restore item from trash
+async function restoreItem(id) {
+    try {
+        const response = await fetch(`/api/trash/${id}/restore`, {
+            method: 'POST'
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+            const items = await loadTrash();
+            renderTrash(items);
+            await loadFolders();
+            if (selectedFolder) {
+                await selectFolder(selectedFolder);
+            }
+        } else {
+            alert(data.error || 'Failed to restore item');
+        }
+    } catch (error) {
+        console.error('Error restoring item:', error);
+        alert('Failed to restore item');
+    }
+}
+
+// Permanently delete item from trash
+async function permanentlyDeleteItem(id, name) {
+    if (!confirm(`Permanently delete "${name}"?\n\nThis action cannot be undone and the item will be removed forever.`)) {
+        return;
+    }
+
+    try {
+        const response = await fetch(`/api/trash/${id}`, {
+            method: 'DELETE'
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+            const items = await loadTrash();
+            renderTrash(items);
+        } else {
+            alert(data.error || 'Failed to delete item');
+        }
+    } catch (error) {
+        console.error('Error deleting item:', error);
+        alert('Failed to delete item');
+    }
+}
+
+// Empty trash
+async function emptyTrash() {
+    const count = trashCountBadge.textContent || '0';
+    if (!confirm(`Empty trash and permanently delete ${count} item(s)?\n\nThis action cannot be undone and all items will be removed forever.`)) {
+        return;
+    }
+
+    try {
+        const response = await fetch('/api/trash/empty/all', {
+            method: 'DELETE'
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+            const items = await loadTrash();
+            renderTrash(items);
+        } else {
+            alert(data.error || 'Failed to empty trash');
+        }
+    } catch (error) {
+        console.error('Error emptying trash:', error);
+        alert('Failed to empty trash');
+    }
+}
+
 // Event listeners
 searchInput.addEventListener('input', (e) => {
     searchQuery = e.target.value;
@@ -256,9 +694,75 @@ folderModal.addEventListener('click', (e) => {
     }
 });
 
+// Rename modal event listeners
+renameCancelBtn.addEventListener('click', hideRenameModal);
+renameConfirmBtn.addEventListener('click', performRename);
+
+renameInput.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') {
+        performRename();
+    }
+});
+
+renameModal.addEventListener('click', (e) => {
+    if (e.target === renameModal) {
+        hideRenameModal();
+    }
+});
+
+// Trash modal event listeners
+trashBtn.addEventListener('click', showTrashModal);
+closeTrashBtn.addEventListener('click', hideTrashModal);
+emptyTrashBtn.addEventListener('click', emptyTrash);
+
+trashModal.addEventListener('click', (e) => {
+    if (e.target === trashModal) {
+        hideTrashModal();
+    }
+});
+
+// Sidebar resize functionality
+let isResizingLeft = false;
+let isResizingRight = false;
+
+leftResizeHandle.addEventListener('mousedown', (e) => {
+    isResizingLeft = true;
+    document.body.style.cursor = 'col-resize';
+    e.preventDefault();
+});
+
+rightResizeHandle.addEventListener('mousedown', (e) => {
+    isResizingRight = true;
+    document.body.style.cursor = 'col-resize';
+    e.preventDefault();
+});
+
+document.addEventListener('mousemove', (e) => {
+    if (isResizingLeft) {
+        const newWidth = e.clientX;
+        if (newWidth >= 150 && newWidth <= 600) {
+            leftSidebar.style.width = newWidth + 'px';
+        }
+    } else if (isResizingRight) {
+        const newWidth = window.innerWidth - e.clientX;
+        if (newWidth >= 150 && newWidth <= 600) {
+            rightSidebar.style.width = newWidth + 'px';
+        }
+    }
+});
+
+document.addEventListener('mouseup', () => {
+    if (isResizingLeft || isResizingRight) {
+        isResizingLeft = false;
+        isResizingRight = false;
+        document.body.style.cursor = 'default';
+    }
+});
+
 // Initialize the application
 async function init() {
     await loadFolders();
+    await loadTrash(); // Load trash count on startup
     startPolling();
 }
 

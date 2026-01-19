@@ -9,18 +9,22 @@
 <body>
     <div class="container">
         <!-- Left Sidebar: Folders -->
-        <aside class="sidebar left-sidebar">
+        <aside class="sidebar left-sidebar" id="left-sidebar">
             <h2>Folders</h2>
             <div class="toolbar">
                 <button id="new-folder-btn" class="btn btn-primary" title="Create new folder">+ New Folder</button>
+                <button id="trash-btn" class="btn btn-secondary" title="View trash">🗑️ Trash <span id="trash-count" class="trash-count"></span></button>
             </div>
             <div id="folder-list" class="list">
                 <p class="empty-message">No folders found</p>
             </div>
         </aside>
 
+        <!-- Left Resize Handle -->
+        <div class="resize-handle left-handle" id="left-resize-handle"></div>
+
         <!-- Main Section: PDF Viewer -->
-        <main class="main-section">
+        <main class="main-section" id="main-section">
             <div id="pdf-viewer" class="pdf-viewer">
                 <div class="welcome-message">
                     <h1>PDF Folder Manager</h1>
@@ -30,8 +34,11 @@
             </div>
         </main>
 
+        <!-- Right Resize Handle -->
+        <div class="resize-handle right-handle" id="right-resize-handle"></div>
+
         <!-- Right Sidebar: PDF List -->
-        <aside class="sidebar right-sidebar">
+        <aside class="sidebar right-sidebar" id="right-sidebar">
             <h2>PDFs</h2>
             <div class="toolbar">
                 <input type="text" id="search-input" class="search-input" placeholder="Search PDFs...">
@@ -51,6 +58,34 @@
             <div class="modal-actions">
                 <button id="create-folder-btn" class="btn btn-success">Create</button>
                 <button id="cancel-folder-btn" class="btn btn-secondary">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal for renaming -->
+    <div id="rename-modal" class="modal">
+        <div class="modal-content">
+            <h3 id="rename-modal-title">Rename</h3>
+            <input type="text" id="rename-input" class="modal-input" placeholder="Enter new name">
+            <div class="modal-actions">
+                <button id="rename-confirm-btn" class="btn btn-success">Rename</button>
+                <button id="rename-cancel-btn" class="btn btn-secondary">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal for trash -->
+    <div id="trash-modal" class="modal">
+        <div class="modal-content modal-large">
+            <div class="modal-header">
+                <h3>🗑️ Trash</h3>
+                <button id="empty-trash-btn" class="btn btn-danger btn-sm">Empty Trash</button>
+            </div>
+            <div id="trash-list" class="trash-list">
+                <p class="empty-message">Trash is empty</p>
+            </div>
+            <div class="modal-actions">
+                <button id="close-trash-btn" class="btn btn-secondary">Close</button>
             </div>
         </div>
     </div>

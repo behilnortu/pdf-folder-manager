@@ -3,6 +3,7 @@ node_modules/
 
 # User data
 pdfs/
+.trash/
 
 # System files
 .DS_Store
