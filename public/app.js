@@ -319,7 +319,6 @@ function renderFolders() {
 
         headingContent.appendChild(collapseIcon);
         headingContent.appendChild(headingName);
-        headingContent.onclick = () => toggleHeading(heading.id);
 
         const headingActions = document.createElement('div');
         headingActions.className = 'heading-actions';
@@ -345,8 +344,15 @@ function renderFolders() {
         headingActions.appendChild(renameBtn);
         headingActions.appendChild(deleteBtn);
 
+        headingContent.appendChild(headingActions);
+        headingContent.onclick = (e) => {
+            // Don't toggle if clicking on action buttons
+            if (!e.target.closest('.heading-actions')) {
+                toggleHeading(heading.id);
+            }
+        };
+
         headingItem.appendChild(headingContent);
-        headingItem.appendChild(headingActions);
         folderListElement.appendChild(headingItem);
 
         // Render folders under this heading (if expanded)
@@ -363,6 +369,13 @@ function renderFolders() {
     // Render uncategorized folders
     const uncategorizedFolders = sortedFolders.filter(folder => !assignedFolders.has(folder.name));
     if (uncategorizedFolders.length > 0) {
+        // Add divider if there are headings above
+        if (headings.length > 0) {
+            const divider = document.createElement('div');
+            divider.className = 'folder-divider';
+            folderListElement.appendChild(divider);
+        }
+
         uncategorizedFolders.forEach(folder => {
             folderListElement.appendChild(renderFolderItem(folder, false));
         });

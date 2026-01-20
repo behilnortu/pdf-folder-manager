@@ -373,7 +373,7 @@ body {
 }
 
 .heading-content {
-    padding: 10px 15px;
+    padding: 5px 10px;
     cursor: pointer;
     display: flex;
     align-items: center;
@@ -397,7 +397,7 @@ body {
 .heading-name {
     flex: 1;
     font-weight: 600;
-    font-size: 15px;
+    font-size: 14px;
     color: #2c5282;
 }
 
@@ -415,10 +415,10 @@ body {
 
 .heading-actions .rename-btn,
 .heading-actions .delete-btn {
-    padding: 4px 8px;
-    font-size: 16px;
-    width: 32px;
-    height: 32px;
+    padding: 2px 6px;
+    font-size: 14px;
+    width: 24px;
+    height: 24px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -436,6 +436,19 @@ body {
 
 .folder-item-indented:last-of-type {
     margin-bottom: 8px;
+}
+
+/* Divider between headings and uncategorized folders */
+.folder-divider {
+    height: 1px;
+    background-color: var(--border-color);
+    margin: 15px 10px;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+body.dark-mode .folder-divider {
+    background-color: var(--border-light);
+    box-shadow: 0 1px 2px rgba(255, 255, 255, 0.05);
 }
 
 /* Unassign button (↑) */
