@@ -13,6 +13,8 @@ let currentViewingFolder = null; // currently viewing PDF folder
 let currentViewingPdf = null; // currently viewing PDF name
 let folderSortPreference = localStorage.getItem('folderSort') || 'name-asc';
 let pdfSortPreference = localStorage.getItem('pdfSort') || 'name-asc';
+let headings = []; // folder headings/groups
+let headingToRename = null; // heading being renamed
 
 // DOM elements
 const folderListElement = document.getElementById('folder-list');
@@ -80,6 +82,19 @@ const notesSaveBtn = document.getElementById('notes-save-btn');
 const notesCancelBtn = document.getElementById('notes-cancel-btn');
 const themeToggleBtn = document.getElementById('theme-toggle-btn');
 const themeIcon = document.querySelector('.theme-icon');
+const newHeadingBtn = document.getElementById('new-heading-btn');
+const headingModal = document.getElementById('heading-modal');
+/** @type {HTMLInputElement} */
+const headingNameInput = /** @type {HTMLInputElement} */ (document.getElementById('heading-name-input'));
+const createHeadingBtn = document.getElementById('create-heading-btn');
+const cancelHeadingBtn = document.getElementById('cancel-heading-btn');
+const assignFolderModal = document.getElementById('assign-folder-modal');
+const assignFolderName = document.getElementById('assign-folder-name');
+/** @type {HTMLSelectElement} */
+const assignHeadingSelect = /** @type {HTMLSelectElement} */ (document.getElementById('assign-heading-select'));
+const assignConfirmBtn = document.getElementById('assign-confirm-btn');
+const assignCancelBtn = document.getElementById('assign-cancel-btn');
+let folderToAssign = null; // folder name to assign to heading
 
 // Utility function to format file size
 function formatFileSize(bytes) {
@@ -121,6 +136,7 @@ async function loadFolders() {
         const response = await fetch('/api/folders');
         const data = await response.json();
         folders = data.folders;
+        await loadHeadings(); // Load headings too
         renderFolders();
     } catch (error) {
         console.error('Error loading folders:', error);
@@ -128,7 +144,120 @@ async function loadFolders() {
     }
 }
 
-// Render folder list
+// Load headings from API
+async function loadHeadings() {
+    try {
+        const response = await fetch('/api/headings');
+        const data = await response.json();
+        headings = data.headings;
+    } catch (error) {
+        console.error('Error loading headings:', error);
+        headings = [];
+    }
+}
+
+// Helper function to render a single folder item
+function renderFolderItem(folder, isUnderHeading = false) {
+    const folderItem = document.createElement('div');
+    folderItem.className = 'list-item';
+    if (isUnderHeading) {
+        folderItem.classList.add('folder-item-indented');
+    }
+
+    const folderName = document.createElement('span');
+    folderName.className = 'list-item-name';
+    folderName.textContent = folder.name;
+
+    const actions = document.createElement('div');
+    actions.className = 'list-item-actions';
+
+    // Unassign button (only show if folder is under a heading)
+    if (isUnderHeading) {
+        const unassignBtn = document.createElement('button');
+        unassignBtn.className = 'unassign-btn';
+        unassignBtn.textContent = '↑';
+        unassignBtn.title = 'Remove from heading';
+        unassignBtn.onclick = (e) => {
+            e.stopPropagation();
+            unassignFolder(folder.name);
+        };
+        actions.appendChild(unassignBtn);
+    }
+
+    // Assign button (only show if folder is NOT under a heading and there are headings)
+    if (!isUnderHeading && headings.length > 0) {
+        const assignBtn = document.createElement('button');
+        assignBtn.className = 'assign-btn';
+        assignBtn.textContent = '📁';
+        assignBtn.title = 'Assign to heading';
+        assignBtn.onclick = (e) => {
+            e.stopPropagation();
+            showAssignFolderModal(folder.name);
+        };
+        actions.appendChild(assignBtn);
+    }
+
+    const renameBtn = document.createElement('button');
+    renameBtn.className = 'rename-btn';
+    renameBtn.textContent = '✏️';
+    renameBtn.title = 'Rename folder';
+    renameBtn.onclick = (e) => {
+        e.stopPropagation();
+        showRenameModal('folder', folder.name);
+    };
+
+    const duplicateBtn = document.createElement('button');
+    duplicateBtn.className = 'duplicate-btn';
+    duplicateBtn.textContent = '📋';
+    duplicateBtn.title = 'Duplicate folder';
+    duplicateBtn.onclick = (e) => {
+        e.stopPropagation();
+        duplicateFolder(folder.name);
+    };
+
+    const exportBtn = document.createElement('button');
+    exportBtn.className = 'export-btn';
+    exportBtn.textContent = '📦';
+    exportBtn.title = 'Export folder as ZIP';
+    exportBtn.onclick = (e) => {
+        e.stopPropagation();
+        exportFolder(folder.name);
+    };
+
+    const deleteBtn = document.createElement('button');
+    deleteBtn.className = 'delete-btn';
+    deleteBtn.textContent = '🗑️';
+    deleteBtn.title = 'Delete folder';
+    deleteBtn.onclick = (e) => {
+        e.stopPropagation();
+        deleteFolder(folder.name);
+    };
+
+    actions.appendChild(renameBtn);
+    actions.appendChild(duplicateBtn);
+    actions.appendChild(exportBtn);
+    actions.appendChild(deleteBtn);
+
+    // In global search mode, highlight folders with matching results
+    // In normal mode, highlight only the selected folder
+    if (isGlobalSearch) {
+        if (foldersWithResults.has(folder.name)) {
+            folderItem.classList.add('active');
+        }
+    } else {
+        if (folder.name === selectedFolder) {
+            folderItem.classList.add('active');
+        }
+    }
+
+    folderItem.addEventListener('click', () => selectFolder(folder.name));
+    folderItem.appendChild(folderName);
+    folderItem.appendChild(actions);
+
+    return folderItem;
+}
+
+// Render folder list with headings
 function renderFolders() {
     if (folders.length === 0) {
         folderListElement.innerHTML = '<p class="empty-message">No folders found</p>';
@@ -139,75 +268,81 @@ function renderFolders() {
 
     const sortedFolders = sortItems(folders, folderSortPreference);
 
-    sortedFolders.forEach(folder => {
-        const folderItem = document.createElement('div');
-        folderItem.className = 'list-item';
+    // Get all folder names that are assigned to headings
+    const assignedFolders = new Set();
+    headings.forEach(heading => {
+        heading.folders.forEach(folderName => {
+            assignedFolders.add(folderName);
+        });
+    });
 
-        const folderName = document.createElement('span');
-        folderName.className = 'list-item-name';
-        folderName.textContent = folder.name;
+    // Render headings with their folders
+    headings.forEach(heading => {
+        // Heading element
+        const headingItem = document.createElement('div');
+        headingItem.className = 'heading-item';
 
-        const actions = document.createElement('div');
-        actions.className = 'list-item-actions';
+        const headingContent = document.createElement('div');
+        headingContent.className = 'heading-content';
+
+        const collapseIcon = document.createElement('span');
+        collapseIcon.className = 'collapse-icon';
+        collapseIcon.textContent = heading.expanded ? '▼' : '▶';
+
+        const headingName = document.createElement('span');
+        headingName.className = 'heading-name';
+        headingName.textContent = heading.name;
+
+        headingContent.appendChild(collapseIcon);
+        headingContent.appendChild(headingName);
+        headingContent.onclick = () => toggleHeading(heading.id);
+
+        const headingActions = document.createElement('div');
+        headingActions.className = 'heading-actions';
 
         const renameBtn = document.createElement('button');
         renameBtn.className = 'rename-btn';
         renameBtn.textContent = '✏️';
-        renameBtn.title = 'Rename folder';
+        renameBtn.title = 'Rename heading';
         renameBtn.onclick = (e) => {
             e.stopPropagation();
-            showRenameModal('folder', folder.name);
-        };
-
-        const duplicateBtn = document.createElement('button');
-        duplicateBtn.className = 'duplicate-btn';
-        duplicateBtn.textContent = '📋';
-        duplicateBtn.title = 'Duplicate folder';
-        duplicateBtn.onclick = (e) => {
-            e.stopPropagation();
-            duplicateFolder(folder.name);
-        };
-
-        const exportBtn = document.createElement('button');
-        exportBtn.className = 'export-btn';
-        exportBtn.textContent = '📦';
-        exportBtn.title = 'Export folder as ZIP';
-        exportBtn.onclick = (e) => {
-            e.stopPropagation();
-            exportFolder(folder.name);
+            showRenameHeadingModal(heading.id, heading.name);
         };
 
         const deleteBtn = document.createElement('button');
         deleteBtn.className = 'delete-btn';
         deleteBtn.textContent = '🗑️';
-        deleteBtn.title = 'Delete folder';
+        deleteBtn.title = 'Delete heading';
         deleteBtn.onclick = (e) => {
             e.stopPropagation();
-            deleteFolder(folder.name);
+            deleteHeading(heading.id);
         };
 
-        actions.appendChild(renameBtn);
-        actions.appendChild(duplicateBtn);
-        actions.appendChild(exportBtn);
-        actions.appendChild(deleteBtn);
+        headingActions.appendChild(renameBtn);
+        headingActions.appendChild(deleteBtn);
 
-        // In global search mode, highlight folders with matching results
-        // In normal mode, highlight only the selected folder
-        if (isGlobalSearch) {
-            if (foldersWithResults.has(folder.name)) {
-                folderItem.classList.add('active');
-            }
-        } else {
-            if (folder.name === selectedFolder) {
-                folderItem.classList.add('active');
-            }
+        headingItem.appendChild(headingContent);
+        headingItem.appendChild(headingActions);
+        folderListElement.appendChild(headingItem);
+
+        // Render folders under this heading (if expanded)
+        if (heading.expanded) {
+            heading.folders.forEach(folderName => {
+                const folder = sortedFolders.find(f => f.name === folderName);
+                if (folder) {
+                    folderListElement.appendChild(renderFolderItem(folder, true));
+                }
+            });
         }
-
-        folderItem.addEventListener('click', () => selectFolder(folder.name));
-        folderItem.appendChild(folderName);
-        folderItem.appendChild(actions);
-        folderListElement.appendChild(folderItem);
     });
+
+    // Render uncategorized folders
+    const uncategorizedFolders = sortedFolders.filter(folder => !assignedFolders.has(folder.name));
+    if (uncategorizedFolders.length > 0) {
+        uncategorizedFolders.forEach(folder => {
+            folderListElement.appendChild(renderFolderItem(folder, false));
+        });
+    }
 }
 
 // Select a folder and load its PDFs
@@ -532,6 +667,65 @@ async function createFolder() {
     }
 }
 
+// Show heading modal
+function showHeadingModal() {
+    headingModal.classList.add('show');
+    headingNameInput.value = '';
+    headingNameInput.focus();
+}
+
+// Hide heading modal
+function hideHeadingModal() {
+    headingModal.classList.remove('show');
+}
+
+// Create new heading from modal
+async function createHeadingFromModal() {
+    const headingName = headingNameInput.value.trim();
+    if (!headingName) {
+        alert('Please enter a heading name');
+        return;
+    }
+
+    await createHeading(headingName);
+    hideHeadingModal();
+}
+
+// Show assign folder modal
+function showAssignFolderModal(folderName) {
+    folderToAssign = folderName;
+    assignFolderName.textContent = `Assign "${folderName}" to:`;
+
+    // Populate heading select
+    assignHeadingSelect.innerHTML = '<option value="">Select heading...</option>';
+    headings.forEach(heading => {
+        const option = document.createElement('option');
+        option.value = heading.id;
+        option.textContent = heading.name;
+        assignHeadingSelect.appendChild(option);
+    });
+
+    assignFolderModal.classList.add('show');
+}
+
+// Hide assign folder modal
+function hideAssignFolderModal() {
+    assignFolderModal.classList.remove('show');
+    folderToAssign = null;
+}
+
+// Perform folder assignment
+async function performAssignFolder() {
+    const headingId = assignHeadingSelect.value;
+    if (!headingId) {
+        alert('Please select a heading');
+        return;
+    }
+
+    await assignFolderToHeading(folderToAssign, headingId);
+    hideAssignFolderModal();
+}
+
 // Upload PDFs
 async function uploadPdfs() {
     if (!selectedFolder) {
@@ -617,6 +811,9 @@ async function performRename() {
         await renameFolder(renameTarget, newName);
     } else if (renameType === 'pdf') {
         await renamePdf(renameTarget, newName);
+    } else if (renameType === 'heading') {
+        await renameHeading(headingToRename, newName);
+        hideRenameModal();
     }
 }
 
@@ -886,6 +1083,172 @@ async function duplicatePdf(pdfName) {
     } catch (error) {
         console.error('Error duplicating PDF:', error);
         alert('Failed to duplicate PDF');
+    }
+}
+
+// Toggle heading expanded/collapsed
+async function toggleHeading(headingId) {
+    try {
+        const response = await fetch(`/api/headings/${headingId}/toggle`, {
+            method: 'PUT'
+        });
+
+        if (response.ok) {
+            await loadHeadings();
+            renderFolders();
+        }
+    } catch (error) {
+        console.error('Error toggling heading:', error);
+    }
+}
+
+// Create new heading
+async function createHeading(name) {
+    if (!name || !name.trim()) {
+        alert('Please enter a heading name');
+        return;
+    }
+
+    try {
+        const response = await fetch('/api/headings', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ name: name.trim() })
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+            await loadHeadings();
+            renderFolders();
+        } else {
+            alert(data.error || 'Failed to create heading');
+        }
+    } catch (error) {
+        console.error('Error creating heading:', error);
+        alert('Failed to create heading');
+    }
+}
+
+// Show rename heading modal
+function showRenameHeadingModal(headingId, currentName) {
+    headingToRename = headingId;
+    renameModalTitle.textContent = 'Rename Heading';
+    renameInput.placeholder = 'Enter new heading name';
+    renameInput.value = currentName;
+
+    renameModal.classList.add('show');
+    renameInput.focus();
+    renameInput.select();
+
+    // Mark that we're renaming a heading, not a folder/pdf
+    renameType = 'heading';
+}
+
+// Rename heading
+async function renameHeading(headingId, newName) {
+    if (!newName || !newName.trim()) {
+        alert('Please enter a heading name');
+        return;
+    }
+
+    try {
+        const response = await fetch(`/api/headings/${headingId}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ name: newName.trim() })
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+            await loadHeadings();
+            renderFolders();
+        } else {
+            alert(data.error || 'Failed to rename heading');
+        }
+    } catch (error) {
+        console.error('Error renaming heading:', error);
+        alert('Failed to rename heading');
+    }
+}
+
+// Delete heading
+async function deleteHeading(headingId) {
+    if (!confirm('Are you sure you want to delete this heading?\n\nFolders will be moved to uncategorized.')) {
+        return;
+    }
+
+    try {
+        const response = await fetch(`/api/headings/${headingId}`, {
+            method: 'DELETE'
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+            await loadHeadings();
+            renderFolders();
+        } else {
+            alert(data.error || 'Failed to delete heading');
+        }
+    } catch (error) {
+        console.error('Error deleting heading:', error);
+        alert('Failed to delete heading');
+    }
+}
+
+// Assign folder to heading (via modal)
+async function assignFolderToHeading(folderName, headingId) {
+    try {
+        const response = await fetch(`/api/headings/${headingId}/assign`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ folderName })
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+            await loadHeadings();
+            renderFolders();
+        } else {
+            alert(data.error || 'Failed to assign folder');
+        }
+    } catch (error) {
+        console.error('Error assigning folder:', error);
+        alert('Failed to assign folder');
+    }
+}
+
+// Unassign folder from heading
+async function unassignFolder(folderName) {
+    try {
+        const response = await fetch('/api/headings/unassign', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ folderName })
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+            await loadHeadings();
+            renderFolders();
+        } else {
+            alert(data.error || 'Failed to unassign folder');
+        }
+    } catch (error) {
+        console.error('Error unassigning folder:', error);
+        alert('Failed to unassign folder');
     }
 }
 
@@ -1351,6 +1714,22 @@ folderNameInput.addEventListener('keypress', (e) => {
     }
 });
 
+newHeadingBtn.addEventListener('click', showHeadingModal);
+cancelHeadingBtn.addEventListener('click', hideHeadingModal);
+createHeadingBtn.addEventListener('click', createHeadingFromModal);
+
+headingNameInput.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') {
+        createHeadingFromModal();
+    }
+});
+
+headingModal.addEventListener('click', (e) => {
+    if (e.target === headingModal) {
+        hideHeadingModal();
+    }
+});
+
 uploadPdfBtn.addEventListener('click', () => {
     if (!selectedFolder) {
         alert('Please select a folder first');
@@ -1392,6 +1771,16 @@ moveConfirmBtn.addEventListener('click', performMovePdf);
 moveModal.addEventListener('click', (e) => {
     if (e.target === moveModal) {
         hideMoveModal();
+    }
+});
+
+// Assign folder modal event listeners
+assignCancelBtn.addEventListener('click', hideAssignFolderModal);
+assignConfirmBtn.addEventListener('click', performAssignFolder);
+
+assignFolderModal.addEventListener('click', (e) => {
+    if (e.target === assignFolderModal) {
+        hideAssignFolderModal();
     }
 });
 

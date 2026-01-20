@@ -363,6 +363,161 @@ body {
     border-color: #c0392b;
 }
 
+/* Heading styles */
+.heading-item {
+    margin-bottom: 8px;
+    border-radius: 6px;
+    background-color: #E3EDF7;
+    border: 3px solid #8FA8C8;
+    overflow: hidden;
+}
+
+.heading-content {
+    padding: 10px 15px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: background-color 0.2s ease;
+}
+
+.heading-content:hover {
+    background-color: #D0E0F0;
+}
+
+.collapse-icon {
+    font-size: 12px;
+    color: #4682B4;
+    width: 16px;
+    text-align: center;
+    flex-shrink: 0;
+    user-select: none;
+}
+
+.heading-name {
+    flex: 1;
+    font-weight: 600;
+    font-size: 15px;
+    color: #2c5282;
+}
+
+.heading-actions {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+    opacity: 0.7;
+    transition: opacity 0.2s ease;
+}
+
+.heading-item:hover .heading-actions {
+    opacity: 1;
+}
+
+.heading-actions .rename-btn,
+.heading-actions .delete-btn {
+    padding: 4px 8px;
+    font-size: 16px;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Indented folder under heading */
+.folder-item-indented {
+    margin-left: 20px;
+    margin-bottom: 4px;
+}
+
+.folder-item-indented:first-of-type {
+    margin-top: 4px;
+}
+
+.folder-item-indented:last-of-type {
+    margin-bottom: 8px;
+}
+
+/* Unassign button (↑) */
+.unassign-btn {
+    padding: 4px 8px;
+    font-size: 16px;
+    background: transparent;
+    border: 1px solid #f39c12;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    color: #f39c12;
+    flex-shrink: 0;
+    line-height: 1;
+}
+
+.unassign-btn:hover {
+    background-color: #f39c12;
+    border-color: #f39c12;
+    color: #fff;
+    transform: scale(1.1);
+}
+
+.list-item.active .unassign-btn {
+    border-color: #fff;
+    color: #fff;
+}
+
+.list-item.active .unassign-btn:hover {
+    background-color: #e67e22;
+    border-color: #e67e22;
+}
+
+/* Assign button (📁) */
+.assign-btn {
+    padding: 4px 8px;
+    font-size: 16px;
+    background: transparent;
+    border: 1px solid #27ae60;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    color: #27ae60;
+    flex-shrink: 0;
+    line-height: 1;
+}
+
+.assign-btn:hover {
+    background-color: #27ae60;
+    border-color: #27ae60;
+    color: #fff;
+    transform: scale(1.1);
+}
+
+.list-item.active .assign-btn {
+    border-color: #fff;
+    color: #fff;
+}
+
+.list-item.active .assign-btn:hover {
+    background-color: #229954;
+    border-color: #229954;
+}
+
+/* Dark mode heading styles */
+body.dark-mode .heading-item {
+    background-color: #2a3f5f;
+    border-color: #4a6fa5;
+}
+
+body.dark-mode .heading-content:hover {
+    background-color: #3a4f6f;
+}
+
+body.dark-mode .heading-name {
+    color: #85b7f0;
+}
+
+body.dark-mode .collapse-icon {
+    color: #85b7f0;
+}
+
 .empty-message {
     padding: 20px;
     text-align: center;

@@ -19,6 +19,7 @@
                     <option value="date-asc">Oldest First</option>
                 </select>
                 <button id="new-folder-btn" class="btn btn-primary" title="Create new folder">+ New Folder</button>
+                <button id="new-heading-btn" class="btn btn-primary" title="Create new heading">+ New Heading</button>
                 <button id="trash-btn" class="btn btn-secondary" title="View trash">🗑️ Trash <span id="trash-count" class="trash-count"></span></button>
             </div>
             <div id="folder-list" class="list">
@@ -104,6 +105,18 @@
         </div>
     </div>
 
+    <!-- Modal for creating new heading -->
+    <div id="heading-modal" class="modal">
+        <div class="modal-content">
+            <h3>Create New Heading</h3>
+            <input type="text" id="heading-name-input" class="modal-input" placeholder="Enter heading name">
+            <div class="modal-actions">
+                <button id="create-heading-btn" class="btn btn-success">Create</button>
+                <button id="cancel-heading-btn" class="btn btn-secondary">Cancel</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Modal for renaming -->
     <div id="rename-modal" class="modal">
         <div class="modal-content">
@@ -143,6 +156,21 @@
             <div class="modal-actions">
                 <button id="move-confirm-btn" class="btn btn-success">Move</button>
                 <button id="move-cancel-btn" class="btn btn-secondary">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal for assigning folder to heading -->
+    <div id="assign-folder-modal" class="modal">
+        <div class="modal-content">
+            <h3>Assign Folder to Heading</h3>
+            <p id="assign-folder-name" style="margin-bottom: 15px; color: #666;"></p>
+            <select id="assign-heading-select" class="modal-input">
+                <option value="">Select heading...</option>
+            </select>
+            <div class="modal-actions">
+                <button id="assign-confirm-btn" class="btn btn-success">Assign</button>
+                <button id="assign-cancel-btn" class="btn btn-secondary">Cancel</button>
             </div>
         </div>
     </div>

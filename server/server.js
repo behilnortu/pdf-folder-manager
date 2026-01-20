@@ -14,6 +14,7 @@ const TRASH_DIR = path.join(__dirname, '../.trash');
 const TRASH_METADATA = path.join(TRASH_DIR, 'metadata.json');
 const BOOKMARKS_FILE = path.join(__dirname, '../.bookmarks.json');
 const NOTES_FILE = path.join(__dirname, '../.notes.json');
+const HEADINGS_FILE = path.join(__dirname, '../.headings.json');
 
 // Configure multer for file uploads
 const storage = multer.diskStorage({
@@ -120,6 +121,31 @@ async function saveNotes(notes) {
     } catch (err) {
         console.error('Error saving notes:', err);
     }
+}
+
+// Headings helpers
+async function loadHeadings() {
+    try {
+        if (fsSync.existsSync(HEADINGS_FILE)) {
+            const data = await fs.readFile(HEADINGS_FILE, 'utf8');
+            return JSON.parse(data);
+        }
+    } catch (err) {
+        console.error('Error loading headings:', err);
+    }
+    return [];
+}
+
+async function saveHeadings(headings) {
+    try {
+        await fs.writeFile(HEADINGS_FILE, JSON.stringify(headings, null, 2));
+    } catch (err) {
+        console.error('Error saving headings:', err);
+    }
+}
+
+function generateHeadingId() {
+    return 'heading_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
 }
 
 // Helper function to get PDF page count
@@ -585,6 +611,174 @@ app.post('/api/notes/:folderName/:pdfName', async (req, res) => {
     } catch (err) {
         console.error('Error saving note:', err);
         res.status(500).json({ error: 'Failed to save note' });
+    }
+});
+
+// API endpoint to get all headings
+app.get('/api/headings', async (req, res) => {
+    try {
+        const headings = await loadHeadings();
+        res.json({ headings });
+    } catch (err) {
+        console.error('Error loading headings:', err);
+        res.status(500).json({ error: 'Failed to load headings' });
+    }
+});
+
+// API endpoint to create a new heading
+app.post('/api/headings', async (req, res) => {
+    const { name } = req.body;
+
+    if (!name || !name.trim()) {
+        return res.status(400).json({ error: 'Heading name is required' });
+    }
+
+    try {
+        const headings = await loadHeadings();
+        const newHeading = {
+            id: generateHeadingId(),
+            name: name.trim(),
+            expanded: true,
+            folders: []
+        };
+
+        headings.push(newHeading);
+        await saveHeadings(headings);
+
+        res.json({ success: true, heading: newHeading });
+    } catch (err) {
+        console.error('Error creating heading:', err);
+        res.status(500).json({ error: 'Failed to create heading' });
+    }
+});
+
+// API endpoint to rename a heading
+app.put('/api/headings/:headingId', async (req, res) => {
+    const { headingId } = req.params;
+    const { name } = req.body;
+
+    if (!name || !name.trim()) {
+        return res.status(400).json({ error: 'Heading name is required' });
+    }
+
+    try {
+        const headings = await loadHeadings();
+        const heading = headings.find(h => h.id === headingId);
+
+        if (!heading) {
+            return res.status(404).json({ error: 'Heading not found' });
+        }
+
+        heading.name = name.trim();
+        await saveHeadings(headings);
+
+        res.json({ success: true, heading });
+    } catch (err) {
+        console.error('Error renaming heading:', err);
+        res.status(500).json({ error: 'Failed to rename heading' });
+    }
+});
+
+// API endpoint to delete a heading
+app.delete('/api/headings/:headingId', async (req, res) => {
+    const { headingId } = req.params;
+
+    try {
+        const headings = await loadHeadings();
+        const headingIndex = headings.findIndex(h => h.id === headingId);
+
+        if (headingIndex === -1) {
+            return res.status(404).json({ error: 'Heading not found' });
+        }
+
+        headings.splice(headingIndex, 1);
+        await saveHeadings(headings);
+
+        res.json({ success: true });
+    } catch (err) {
+        console.error('Error deleting heading:', err);
+        res.status(500).json({ error: 'Failed to delete heading' });
+    }
+});
+
+// API endpoint to toggle heading expanded state
+app.put('/api/headings/:headingId/toggle', async (req, res) => {
+    const { headingId } = req.params;
+
+    try {
+        const headings = await loadHeadings();
+        const heading = headings.find(h => h.id === headingId);
+
+        if (!heading) {
+            return res.status(404).json({ error: 'Heading not found' });
+        }
+
+        heading.expanded = !heading.expanded;
+        await saveHeadings(headings);
+
+        res.json({ success: true, heading });
+    } catch (err) {
+        console.error('Error toggling heading:', err);
+        res.status(500).json({ error: 'Failed to toggle heading' });
+    }
+});
+
+// API endpoint to assign folder to heading
+app.post('/api/headings/:headingId/assign', async (req, res) => {
+    const { headingId } = req.params;
+    const { folderName } = req.body;
+
+    if (!folderName) {
+        return res.status(400).json({ error: 'Folder name is required' });
+    }
+
+    try {
+        const headings = await loadHeadings();
+
+        // Remove folder from all headings first
+        headings.forEach(h => {
+            h.folders = h.folders.filter(f => f !== folderName);
+        });
+
+        // Add folder to specified heading
+        const heading = headings.find(h => h.id === headingId);
+        if (!heading) {
+            return res.status(404).json({ error: 'Heading not found' });
+        }
+
+        if (!heading.folders.includes(folderName)) {
+            heading.folders.push(folderName);
+        }
+
+        await saveHeadings(headings);
+        res.json({ success: true, heading });
+    } catch (err) {
+        console.error('Error assigning folder to heading:', err);
+        res.status(500).json({ error: 'Failed to assign folder' });
+    }
+});
+
+// API endpoint to unassign folder from heading
+app.post('/api/headings/unassign', async (req, res) => {
+    const { folderName } = req.body;
+
+    if (!folderName) {
+        return res.status(400).json({ error: 'Folder name is required' });
+    }
+
+    try {
+        const headings = await loadHeadings();
+
+        // Remove folder from all headings
+        headings.forEach(h => {
+            h.folders = h.folders.filter(f => f !== folderName);
+        });
+
+        await saveHeadings(headings);
+        res.json({ success: true });
+    } catch (err) {
+        console.error('Error unassigning folder:', err);
+        res.status(500).json({ error: 'Failed to unassign folder' });
     }
 });
 

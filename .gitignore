@@ -6,6 +6,7 @@ pdfs/
 .trash/
 .bookmarks.json
 .notes.json
+.headings.json
 
 # System files
 .DS_Store
