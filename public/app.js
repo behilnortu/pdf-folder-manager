@@ -18,17 +18,21 @@ let pdfSortPreference = localStorage.getItem('pdfSort') || 'name-asc';
 const folderListElement = document.getElementById('folder-list');
 const pdfListElement = document.getElementById('pdf-list');
 const pdfViewerElement = document.getElementById('pdf-viewer');
-const searchInput = document.getElementById('search-input');
+/** @type {HTMLInputElement} */
+const searchInput = /** @type {HTMLInputElement} */ (document.getElementById('search-input'));
 const newFolderBtn = document.getElementById('new-folder-btn');
 const uploadPdfBtn = document.getElementById('upload-pdf-btn');
-const pdfFileInput = document.getElementById('pdf-file-input');
+/** @type {HTMLInputElement} */
+const pdfFileInput = /** @type {HTMLInputElement} */ (document.getElementById('pdf-file-input'));
 const folderModal = document.getElementById('folder-modal');
-const folderNameInput = document.getElementById('folder-name-input');
+/** @type {HTMLInputElement} */
+const folderNameInput = /** @type {HTMLInputElement} */ (document.getElementById('folder-name-input'));
 const createFolderBtn = document.getElementById('create-folder-btn');
 const cancelFolderBtn = document.getElementById('cancel-folder-btn');
 const renameModal = document.getElementById('rename-modal');
 const renameModalTitle = document.getElementById('rename-modal-title');
-const renameInput = document.getElementById('rename-input');
+/** @type {HTMLInputElement} */
+const renameInput = /** @type {HTMLInputElement} */ (document.getElementById('rename-input'));
 const renameConfirmBtn = document.getElementById('rename-confirm-btn');
 const renameCancelBtn = document.getElementById('rename-cancel-btn');
 const trashBtn = document.getElementById('trash-btn');
@@ -44,27 +48,34 @@ const rightResizeHandle = document.getElementById('right-resize-handle');
 const clearPdfBtn = document.getElementById('clear-pdf-btn');
 const moveModal = document.getElementById('move-modal');
 const movePdfName = document.getElementById('move-pdf-name');
-const moveFolderSelect = document.getElementById('move-folder-select');
+/** @type {HTMLSelectElement} */
+const moveFolderSelect = /** @type {HTMLSelectElement} */ (document.getElementById('move-folder-select'));
 const moveConfirmBtn = document.getElementById('move-confirm-btn');
 const moveCancelBtn = document.getElementById('move-cancel-btn');
 const addBookmarkBtn = document.getElementById('add-bookmark-btn');
 const viewBookmarksBtn = document.getElementById('view-bookmarks-btn');
 const bookmarkModal = document.getElementById('bookmark-modal');
 const bookmarkPdfInfo = document.getElementById('bookmark-pdf-info');
-const bookmarkPageInput = document.getElementById('bookmark-page-input');
-const bookmarkLabelInput = document.getElementById('bookmark-label-input');
+/** @type {HTMLInputElement} */
+const bookmarkPageInput = /** @type {HTMLInputElement} */ (document.getElementById('bookmark-page-input'));
+/** @type {HTMLInputElement} */
+const bookmarkLabelInput = /** @type {HTMLInputElement} */ (document.getElementById('bookmark-label-input'));
 const bookmarkSaveBtn = document.getElementById('bookmark-save-btn');
 const bookmarkCancelBtn = document.getElementById('bookmark-cancel-btn');
 const bookmarksViewModal = document.getElementById('bookmarks-view-modal');
 const bookmarksList = document.getElementById('bookmarks-list');
 const closeBookmarksBtn = document.getElementById('close-bookmarks-btn');
-const folderSortSelect = document.getElementById('folder-sort-select');
-const pdfSortSelect = document.getElementById('pdf-sort-select');
-const globalSearchCheckbox = document.getElementById('global-search-checkbox');
+/** @type {HTMLSelectElement} */
+const folderSortSelect = /** @type {HTMLSelectElement} */ (document.getElementById('folder-sort-select'));
+/** @type {HTMLSelectElement} */
+const pdfSortSelect = /** @type {HTMLSelectElement} */ (document.getElementById('pdf-sort-select'));
+/** @type {HTMLInputElement} */
+const globalSearchCheckbox = /** @type {HTMLInputElement} */ (document.getElementById('global-search-checkbox'));
 const notesBtn = document.getElementById('notes-btn');
 const notesModal = document.getElementById('notes-modal');
 const notesPdfInfo = document.getElementById('notes-pdf-info');
-const notesTextarea = document.getElementById('notes-textarea');
+/** @type {HTMLTextAreaElement} */
+const notesTextarea = /** @type {HTMLTextAreaElement} */ (document.getElementById('notes-textarea'));
 const notesSaveBtn = document.getElementById('notes-save-btn');
 const notesCancelBtn = document.getElementById('notes-cancel-btn');
 const themeToggleBtn = document.getElementById('theme-toggle-btn');
@@ -92,9 +103,9 @@ function sortItems(items, sortBy) {
         case 'name-desc':
             return sorted.sort((a, b) => b.name.localeCompare(a.name));
         case 'date-asc':
-            return sorted.sort((a, b) => new Date(a.mtime) - new Date(b.mtime));
+            return sorted.sort((a, b) => new Date(a.mtime).getTime() - new Date(b.mtime).getTime());
         case 'date-desc':
-            return sorted.sort((a, b) => new Date(b.mtime) - new Date(a.mtime));
+            return sorted.sort((a, b) => new Date(b.mtime).getTime() - new Date(a.mtime).getTime());
         case 'size-asc':
             return sorted.sort((a, b) => a.size - b.size);
         case 'size-desc':
@@ -1321,12 +1332,12 @@ async function saveNote() {
 
 // Event listeners
 searchInput.addEventListener('input', (e) => {
-    searchQuery = e.target.value;
+    searchQuery = /** @type {HTMLInputElement} */ (e.target).value;
     filterPdfs();
 });
 
 globalSearchCheckbox.addEventListener('change', (e) => {
-    isGlobalSearch = e.target.checked;
+    isGlobalSearch = /** @type {HTMLInputElement} */ (e.target).checked;
     filterPdfs();
 });
 
@@ -1432,13 +1443,13 @@ folderSortSelect.value = folderSortPreference;
 pdfSortSelect.value = pdfSortPreference;
 
 folderSortSelect.addEventListener('change', (e) => {
-    folderSortPreference = e.target.value;
+    folderSortPreference = /** @type {HTMLSelectElement} */ (e.target).value;
     localStorage.setItem('folderSort', folderSortPreference);
     renderFolders();
 });
 
 pdfSortSelect.addEventListener('change', (e) => {
-    pdfSortPreference = e.target.value;
+    pdfSortPreference = /** @type {HTMLSelectElement} */ (e.target).value;
     localStorage.setItem('pdfSort', pdfSortPreference);
     renderPdfs();
 });
