@@ -148,6 +148,15 @@ function renderFolders() {
             showRenameModal('folder', folder.name);
         };
 
+        const duplicateBtn = document.createElement('button');
+        duplicateBtn.className = 'duplicate-btn';
+        duplicateBtn.textContent = '📋';
+        duplicateBtn.title = 'Duplicate folder';
+        duplicateBtn.onclick = (e) => {
+            e.stopPropagation();
+            duplicateFolder(folder.name);
+        };
+
         const exportBtn = document.createElement('button');
         exportBtn.className = 'export-btn';
         exportBtn.textContent = '📦';
@@ -167,6 +176,7 @@ function renderFolders() {
         };
 
         actions.appendChild(renameBtn);
+        actions.appendChild(duplicateBtn);
         actions.appendChild(exportBtn);
         actions.appendChild(deleteBtn);
 
@@ -352,6 +362,21 @@ function renderPdfs() {
             }
         };
 
+        const duplicateBtn = document.createElement('button');
+        duplicateBtn.className = 'duplicate-btn';
+        duplicateBtn.textContent = '📋';
+        duplicateBtn.title = 'Duplicate PDF';
+        duplicateBtn.onclick = (e) => {
+            e.stopPropagation();
+            if (isGlobalSearch && pdf.folderName) {
+                selectFolder(pdf.folderName).then(() => {
+                    duplicatePdf(pdf.name);
+                });
+            } else {
+                duplicatePdf(pdf.name);
+            }
+        };
+
         const moveBtn = document.createElement('button');
         moveBtn.className = 'move-btn';
         moveBtn.textContent = '📁';
@@ -383,6 +408,7 @@ function renderPdfs() {
         };
 
         actions.appendChild(renameBtn);
+        actions.appendChild(duplicateBtn);
         actions.appendChild(moveBtn);
         actions.appendChild(deleteBtn);
 
@@ -805,6 +831,52 @@ async function deletePdf(pdfName) {
     } catch (error) {
         console.error('Error deleting PDF:', error);
         alert('Failed to delete PDF');
+    }
+}
+
+// Duplicate folder
+async function duplicateFolder(folderName) {
+    try {
+        const response = await fetch(`/api/folders/${encodeURIComponent(folderName)}/duplicate`, {
+            method: 'POST'
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+            await loadFolders();
+            await selectFolder(data.newFolderName);
+        } else {
+            alert(data.error || 'Failed to duplicate folder');
+        }
+    } catch (error) {
+        console.error('Error duplicating folder:', error);
+        alert('Failed to duplicate folder');
+    }
+}
+
+// Duplicate PDF
+async function duplicatePdf(pdfName) {
+    if (!selectedFolder) {
+        alert('No folder selected');
+        return;
+    }
+
+    try {
+        const response = await fetch(`/api/folders/${encodeURIComponent(selectedFolder)}/pdf/${encodeURIComponent(pdfName)}/duplicate`, {
+            method: 'POST'
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+            await selectFolder(selectedFolder);
+        } else {
+            alert(data.error || 'Failed to duplicate PDF');
+        }
+    } catch (error) {
+        console.error('Error duplicating PDF:', error);
+        alert('Failed to duplicate PDF');
     }
 }
 

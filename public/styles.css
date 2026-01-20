@@ -277,6 +277,25 @@ body {
     transform: scale(1.1);
 }
 
+.duplicate-btn {
+    padding: 4px 8px;
+    font-size: 16px;
+    background: transparent;
+    border: 1px solid #999;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    color: #666;
+    flex-shrink: 0;
+    line-height: 1;
+}
+
+.duplicate-btn:hover {
+    background-color: #9b59b6;
+    border-color: #9b59b6;
+    transform: scale(1.1);
+}
+
 .move-btn {
     padding: 4px 8px;
     font-size: 16px;

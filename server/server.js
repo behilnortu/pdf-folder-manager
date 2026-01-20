@@ -588,6 +588,82 @@ app.post('/api/notes/:folderName/:pdfName', async (req, res) => {
     }
 });
 
+// API endpoint to duplicate a folder
+app.post('/api/folders/:folderName/duplicate', async (req, res) => {
+    const folderName = req.params.folderName;
+    const sourcePath = path.join(PDF_DIR, folderName);
+
+    try {
+        // Check if source folder exists
+        if (!fsSync.existsSync(sourcePath)) {
+            return res.status(404).json({ error: 'Folder not found' });
+        }
+
+        // Generate new folder name with (copy) pattern
+        let newFolderName = `${folderName} (copy)`;
+        let counter = 2;
+
+        // Check if name exists, increment until we find a unique name
+        while (fsSync.existsSync(path.join(PDF_DIR, newFolderName))) {
+            newFolderName = `${folderName} (copy ${counter})`;
+            counter++;
+        }
+
+        const destPath = path.join(PDF_DIR, newFolderName);
+
+        // Create new folder
+        await fs.mkdir(destPath, { recursive: true });
+
+        // Read all PDFs in source folder
+        const files = await fs.readdir(sourcePath);
+        const pdfFiles = files.filter(file => file.toLowerCase().endsWith('.pdf'));
+
+        // Copy each PDF
+        for (const pdfFile of pdfFiles) {
+            const srcFile = path.join(sourcePath, pdfFile);
+            const destFile = path.join(destPath, pdfFile);
+            await fs.copyFile(srcFile, destFile);
+        }
+
+        // Duplicate bookmarks and notes for all PDFs
+        const bookmarks = await loadBookmarks();
+        const notes = await loadNotes();
+
+        // Duplicate bookmarks
+        const folderBookmarks = bookmarks.filter(b => b.folderName === folderName);
+        for (const bookmark of folderBookmarks) {
+            bookmarks.push({
+                ...bookmark,
+                id: generateBookmarkId(),
+                folderName: newFolderName,
+                createdAt: new Date().toISOString()
+            });
+        }
+        await saveBookmarks(bookmarks);
+
+        // Duplicate notes
+        for (const pdfFile of pdfFiles) {
+            const sourceKey = `${folderName}/${pdfFile}`;
+            const destKey = `${newFolderName}/${pdfFile}`;
+
+            if (notes[sourceKey]) {
+                notes[destKey] = {
+                    text: notes[sourceKey].text,
+                    updatedAt: new Date().toISOString()
+                };
+            }
+        }
+        await saveNotes(notes);
+
+        await scanPdfDirectory();
+
+        res.json({ success: true, newFolderName: newFolderName });
+    } catch (err) {
+        console.error('Error duplicating folder:', err);
+        res.status(500).json({ error: 'Failed to duplicate folder' });
+    }
+});
+
 // API endpoint to move folder to trash
 app.delete('/api/folders/:folderName', async (req, res) => {
     const folderName = req.params.folderName;
@@ -661,6 +737,75 @@ app.delete('/api/folders/:folderName/pdf/:pdfName', async (req, res) => {
     } catch (err) {
         console.error('Error moving PDF to trash:', err);
         res.status(500).json({ error: 'Failed to move PDF to trash' });
+    }
+});
+
+// API endpoint to duplicate a PDF
+app.post('/api/folders/:folderName/pdf/:pdfName/duplicate', async (req, res) => {
+    const folderName = req.params.folderName;
+    const pdfName = req.params.pdfName;
+    const folderPath = path.join(PDF_DIR, folderName);
+    const sourcePath = path.join(folderPath, pdfName);
+
+    try {
+        // Check if source PDF exists
+        if (!fsSync.existsSync(sourcePath)) {
+            return res.status(404).json({ error: 'PDF not found' });
+        }
+
+        // Generate new name with (copy) pattern
+        const ext = path.extname(pdfName);
+        const baseName = path.basename(pdfName, ext);
+        let newName = `${baseName} (copy)${ext}`;
+        let counter = 2;
+
+        // Check if name exists, increment until we find a unique name
+        while (fsSync.existsSync(path.join(folderPath, newName))) {
+            newName = `${baseName} (copy ${counter})${ext}`;
+            counter++;
+        }
+
+        const destPath = path.join(folderPath, newName);
+
+        // Copy the PDF file
+        await fs.copyFile(sourcePath, destPath);
+
+        // Also duplicate bookmarks and notes if they exist
+        const bookmarks = await loadBookmarks();
+        const notes = await loadNotes();
+
+        const sourceKey = `${folderName}/${pdfName}`;
+        const destKey = `${folderName}/${newName}`;
+
+        // Duplicate bookmarks
+        const sourceBookmarks = bookmarks.filter(b =>
+            b.folderName === folderName && b.pdfName === pdfName
+        );
+        for (const bookmark of sourceBookmarks) {
+            bookmarks.push({
+                ...bookmark,
+                id: generateBookmarkId(),
+                pdfName: newName,
+                createdAt: new Date().toISOString()
+            });
+        }
+        await saveBookmarks(bookmarks);
+
+        // Duplicate notes
+        if (notes[sourceKey]) {
+            notes[destKey] = {
+                text: notes[sourceKey].text,
+                updatedAt: new Date().toISOString()
+            };
+            await saveNotes(notes);
+        }
+
+        await scanPdfDirectory();
+
+        res.json({ success: true, newPdfName: newName });
+    } catch (err) {
+        console.error('Error duplicating PDF:', err);
+        res.status(500).json({ error: 'Failed to duplicate PDF' });
     }
 });
 
