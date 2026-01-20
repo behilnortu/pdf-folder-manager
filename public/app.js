@@ -5,6 +5,7 @@ let currentPdfs = [];
 let filteredPdfs = [];
 let searchQuery = '';
 let isGlobalSearch = false;
+let foldersWithResults = new Set(); // Folders that have matching PDFs in global search
 let renameType = null; // 'folder' or 'pdf'
 let renameTarget = null; // name of folder or pdf to rename
 let movePdfTarget = null; // name of pdf to move
@@ -161,8 +162,16 @@ function renderFolders() {
         actions.appendChild(exportBtn);
         actions.appendChild(deleteBtn);
 
-        if (folder.name === selectedFolder) {
-            folderItem.classList.add('active');
+        // In global search mode, highlight folders with matching results
+        // In normal mode, highlight only the selected folder
+        if (isGlobalSearch) {
+            if (foldersWithResults.has(folder.name)) {
+                folderItem.classList.add('active');
+            }
+        } else {
+            if (folder.name === selectedFolder) {
+                folderItem.classList.add('active');
+            }
         }
 
         folderItem.addEventListener('click', () => selectFolder(folder.name));
@@ -175,6 +184,14 @@ function renderFolders() {
 // Select a folder and load its PDFs
 async function selectFolder(folderName) {
     selectedFolder = folderName;
+
+    // Turn off global search when selecting a folder
+    if (isGlobalSearch) {
+        isGlobalSearch = false;
+        globalSearchCheckbox.checked = false;
+        foldersWithResults.clear();
+    }
+
     renderFolders(); // Update active state
 
     try {
@@ -194,6 +211,8 @@ async function selectFolder(folderName) {
 function filterPdfs() {
     if (isGlobalSearch) {
         // Search across all folders
+        foldersWithResults.clear();
+
         if (!searchQuery) {
             filteredPdfs = [];
         } else {
@@ -201,18 +220,29 @@ function filterPdfs() {
             filteredPdfs = [];
 
             folders.forEach(folder => {
+                let folderHasResults = false;
                 folder.pdfs.forEach(pdf => {
                     if (pdf.name.toLowerCase().includes(query)) {
                         filteredPdfs.push({
                             ...pdf,
                             folderName: folder.name
                         });
+                        folderHasResults = true;
                     }
                 });
+
+                if (folderHasResults) {
+                    foldersWithResults.add(folder.name);
+                }
             });
         }
+
+        // Re-render folders to show highlights
+        renderFolders();
     } else {
         // Search within current folder only
+        foldersWithResults.clear();
+
         if (!searchQuery) {
             filteredPdfs = [...currentPdfs];
         } else {
@@ -221,6 +251,9 @@ function filterPdfs() {
                 pdf.name.toLowerCase().includes(query)
             );
         }
+
+        // Re-render folders to clear highlights
+        renderFolders();
     }
     renderPdfs();
 }
