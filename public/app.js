@@ -749,8 +749,6 @@ function exportFolder(folderName) {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-
-    console.log(`Exporting folder: ${folderName}`);
 }
 
 // Delete folder with confirmation
