@@ -86,7 +86,23 @@
                     </label>
                 </div>
                 <button id="upload-pdf-btn" class="btn btn-primary" title="Upload PDF">+ Upload PDF</button>
+                <button id="bulk-select-btn" class="btn btn-secondary" title="Enable bulk selection">📋 Bulk Select</button>
             </div>
+
+            <!-- Bulk actions toolbar (hidden by default) -->
+            <div id="bulk-toolbar" class="bulk-toolbar" style="display: none;">
+                <div class="bulk-info">
+                    <span id="bulk-count">0 selected</span>
+                    <button id="clear-selection-btn" class="btn-sm btn-secondary">Clear</button>
+                </div>
+                <div class="bulk-actions">
+                    <button id="bulk-rename-btn" class="btn-sm btn-secondary">✏️ Rename</button>
+                    <button id="bulk-duplicate-btn" class="btn-sm btn-secondary">📋 Duplicate</button>
+                    <button id="bulk-move-btn" class="btn-sm btn-secondary">📁 Move</button>
+                    <button id="bulk-delete-btn" class="btn-sm btn-danger">🗑️ Delete</button>
+                </div>
+            </div>
+
             <div id="pdf-list" class="list">
                 <p class="empty-message">Select a folder to view PDFs</p>
             </div>
@@ -215,6 +231,44 @@
             <div class="modal-actions">
                 <button id="notes-save-btn" class="btn btn-success">Save Notes</button>
                 <button id="notes-cancel-btn" class="btn btn-secondary">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal for bulk rename -->
+    <div id="bulk-rename-modal" class="modal">
+        <div class="modal-content modal-large">
+            <h3>Bulk Rename (<span id="bulk-rename-count">0</span> PDFs)</h3>
+            <div class="rename-options">
+                <label>Add to beginning (prefix):</label>
+                <input type="text" id="bulk-prefix-input" class="modal-input" placeholder="e.g., final_">
+
+                <label>Add to end (suffix, before .pdf):</label>
+                <input type="text" id="bulk-suffix-input" class="modal-input" placeholder="e.g., _v2">
+            </div>
+
+            <div id="bulk-rename-preview" class="bulk-preview">
+                <!-- Preview list will be rendered here -->
+            </div>
+
+            <div class="modal-actions">
+                <button id="bulk-rename-confirm-btn" class="btn btn-success">Rename All</button>
+                <button id="bulk-rename-cancel-btn" class="btn btn-secondary">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal for bulk delete confirmation -->
+    <div id="bulk-delete-modal" class="modal">
+        <div class="modal-content modal-large">
+            <h3>⚠️ Delete <span id="bulk-delete-count">0</span> PDFs?</h3>
+            <div id="bulk-delete-list" class="bulk-preview">
+                <!-- List of PDFs to delete -->
+            </div>
+            <p class="warning-text">This action will move all selected PDFs to trash.</p>
+            <div class="modal-actions">
+                <button id="bulk-delete-confirm-btn" class="btn btn-danger">Delete All</button>
+                <button id="bulk-delete-cancel-btn" class="btn btn-secondary">Cancel</button>
             </div>
         </div>
     </div>

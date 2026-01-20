@@ -15,6 +15,8 @@ let folderSortPreference = localStorage.getItem('folderSort') || 'name-asc';
 let pdfSortPreference = localStorage.getItem('pdfSort') || 'name-asc';
 let headings = []; // folder headings/groups
 let headingToRename = null; // heading being renamed
+let selectedPdfs = new Map(); // Map<"folder::pdf", {folderName, pdfName}> for bulk operations
+let bulkMode = false; // Toggle for checkbox visibility in bulk selection mode
 
 // DOM elements
 const folderListElement = document.getElementById('folder-list');
@@ -95,6 +97,28 @@ const assignHeadingSelect = /** @type {HTMLSelectElement} */ (document.getElemen
 const assignConfirmBtn = document.getElementById('assign-confirm-btn');
 const assignCancelBtn = document.getElementById('assign-cancel-btn');
 let folderToAssign = null; // folder name to assign to heading
+const bulkSelectBtn = document.getElementById('bulk-select-btn');
+const bulkToolbar = document.getElementById('bulk-toolbar');
+const bulkCount = document.getElementById('bulk-count');
+const clearSelectionBtn = document.getElementById('clear-selection-btn');
+const bulkRenameBtn = document.getElementById('bulk-rename-btn');
+const bulkDuplicateBtn = document.getElementById('bulk-duplicate-btn');
+const bulkMoveBtn = document.getElementById('bulk-move-btn');
+const bulkDeleteBtn = document.getElementById('bulk-delete-btn');
+const bulkRenameModal = document.getElementById('bulk-rename-modal');
+const bulkRenameCount = document.getElementById('bulk-rename-count');
+/** @type {HTMLInputElement} */
+const bulkPrefixInput = /** @type {HTMLInputElement} */ (document.getElementById('bulk-prefix-input'));
+/** @type {HTMLInputElement} */
+const bulkSuffixInput = /** @type {HTMLInputElement} */ (document.getElementById('bulk-suffix-input'));
+const bulkRenamePreview = document.getElementById('bulk-rename-preview');
+const bulkRenameConfirmBtn = document.getElementById('bulk-rename-confirm-btn');
+const bulkRenameCancelBtn = document.getElementById('bulk-rename-cancel-btn');
+const bulkDeleteModal = document.getElementById('bulk-delete-modal');
+const bulkDeleteCount = document.getElementById('bulk-delete-count');
+const bulkDeleteList = document.getElementById('bulk-delete-list');
+const bulkDeleteConfirmBtn = document.getElementById('bulk-delete-confirm-btn');
+const bulkDeleteCancelBtn = document.getElementById('bulk-delete-cancel-btn');
 
 // Utility function to format file size
 function formatFileSize(bytes) {
@@ -349,6 +373,11 @@ function renderFolders() {
 async function selectFolder(folderName) {
     selectedFolder = folderName;
 
+    // Clear bulk selections when switching folders
+    if (selectedPdfs.size > 0) {
+        clearSelection();
+    }
+
     // Turn off global search when selecting a folder
     if (isGlobalSearch) {
         isGlobalSearch = false;
@@ -455,6 +484,28 @@ function renderPdfs() {
         const pdfItem = document.createElement('div');
         pdfItem.className = 'list-item';
 
+        // Use the correct folder for this PDF
+        const pdfFolder = pdf.folderName || selectedFolder;
+        const selectionKey = `${pdfFolder}::${pdf.name}`;
+
+        // Add checkbox if in bulk mode
+        if (bulkMode) {
+            const checkbox = document.createElement('input');
+            checkbox.type = 'checkbox';
+            checkbox.className = 'pdf-checkbox';
+            checkbox.checked = selectedPdfs.has(selectionKey);
+            checkbox.onclick = (e) => {
+                e.stopPropagation();
+                togglePdfSelection(pdfFolder, pdf.name);
+            };
+            pdfItem.appendChild(checkbox);
+        }
+
+        // Add selected class if this PDF is selected
+        if (selectedPdfs.has(selectionKey)) {
+            pdfItem.classList.add('selected');
+        }
+
         const pdfName = document.createElement('span');
         pdfName.className = 'list-item-name';
         pdfName.textContent = pdf.name;
@@ -488,9 +539,6 @@ function renderPdfs() {
 
         const actions = document.createElement('div');
         actions.className = 'list-item-actions';
-
-        // Use the correct folder for actions
-        const pdfFolder = pdf.folderName || selectedFolder;
 
         const renameBtn = document.createElement('button');
         renameBtn.className = 'rename-btn';
@@ -558,10 +606,76 @@ function renderPdfs() {
         actions.appendChild(moveBtn);
         actions.appendChild(deleteBtn);
 
-        pdfItem.addEventListener('click', () => viewPdf(pdfFolder, pdf.name));
+        // Click handler: in bulk mode, toggle selection; otherwise view PDF
+        pdfItem.addEventListener('click', () => {
+            if (bulkMode) {
+                togglePdfSelection(pdfFolder, pdf.name);
+            } else {
+                viewPdf(pdfFolder, pdf.name);
+            }
+        });
+
         pdfItem.appendChild(actions);
         pdfListElement.appendChild(pdfItem);
     });
+}
+
+// Toggle bulk selection mode
+function toggleBulkMode() {
+    bulkMode = !bulkMode;
+
+    if (!bulkMode) {
+        // Exiting bulk mode - clear selections
+        clearSelection();
+    }
+
+    // Update button text
+    bulkSelectBtn.textContent = bulkMode ? '✕ Exit Bulk' : '📋 Bulk Select';
+    bulkSelectBtn.classList.toggle('btn-secondary', !bulkMode);
+    bulkSelectBtn.classList.toggle('btn-danger', bulkMode);
+
+    // Re-render PDFs to show/hide checkboxes
+    renderPdfs();
+}
+
+// Toggle selection of a single PDF
+function togglePdfSelection(folderName, pdfName) {
+    const key = `${folderName}::${pdfName}`;
+
+    if (selectedPdfs.has(key)) {
+        selectedPdfs.delete(key);
+    } else {
+        selectedPdfs.set(key, { folderName, pdfName });
+    }
+
+    updateBulkToolbar();
+    renderPdfs();
+}
+
+// Update bulk toolbar visibility and counter
+function updateBulkToolbar() {
+    const count = selectedPdfs.size;
+
+    if (count > 0) {
+        bulkToolbar.style.display = 'block';
+        bulkCount.textContent = `${count} selected`;
+
+        // Enable/disable bulk action buttons
+        const hasSelection = count > 0;
+        bulkRenameBtn.disabled = !hasSelection;
+        bulkDuplicateBtn.disabled = !hasSelection;
+        bulkMoveBtn.disabled = !hasSelection;
+        bulkDeleteBtn.disabled = !hasSelection;
+    } else {
+        bulkToolbar.style.display = 'none';
+    }
+}
+
+// Clear all selections
+function clearSelection() {
+    selectedPdfs.clear();
+    updateBulkToolbar();
+    renderPdfs();
 }
 
 // View a PDF in the main section
@@ -1693,6 +1807,300 @@ async function saveNote() {
     }
 }
 
+// Bulk Delete Functions
+function showBulkDeleteModal() {
+    if (selectedPdfs.size === 0) {
+        alert('No PDFs selected');
+        return;
+    }
+
+    bulkDeleteCount.textContent = selectedPdfs.size;
+
+    // Populate list of PDFs to delete
+    bulkDeleteList.innerHTML = '';
+    for (const [key, pdf] of selectedPdfs) {
+        const item = document.createElement('div');
+        item.className = 'preview-item';
+        item.textContent = isGlobalSearch ? `${pdf.folderName}/${pdf.pdfName}` : pdf.pdfName;
+        bulkDeleteList.appendChild(item);
+    }
+
+    bulkDeleteModal.classList.add('show');
+}
+
+function hideBulkDeleteModal() {
+    bulkDeleteModal.classList.remove('show');
+}
+
+async function performBulkDelete() {
+    const pdfsToDelete = Array.from(selectedPdfs.values());
+    let successCount = 0;
+    let failCount = 0;
+
+    hideBulkDeleteModal();
+
+    for (const pdf of pdfsToDelete) {
+        try {
+            const response = await fetch(`/api/folders/${encodeURIComponent(pdf.folderName)}/pdf/${encodeURIComponent(pdf.pdfName)}`, {
+                method: 'DELETE'
+            });
+
+            if (response.ok) {
+                successCount++;
+            } else {
+                failCount++;
+            }
+        } catch (error) {
+            console.error('Error deleting PDF:', error);
+            failCount++;
+        }
+    }
+
+    // Clear selection and reload
+    clearSelection();
+    await loadFolders();
+    await selectFolder(selectedFolder);
+
+    // Show result
+    if (failCount === 0) {
+        alert(`Successfully deleted ${successCount} PDF(s)`);
+    } else {
+        alert(`Deleted ${successCount} PDF(s), ${failCount} failed`);
+    }
+}
+
+// Bulk Move Functions
+function showBulkMoveModal() {
+    if (selectedPdfs.size === 0) {
+        alert('No PDFs selected');
+        return;
+    }
+
+    // Populate folder select - exclude folders that contain selected PDFs
+    const selectedFolders = new Set(Array.from(selectedPdfs.values()).map(pdf => pdf.folderName));
+    moveFolderSelect.innerHTML = '<option value="">Select destination folder...</option>';
+
+    folders.forEach(folder => {
+        // Skip folders that have selected PDFs (can't move to same folder)
+        if (!selectedFolders.has(folder.name)) {
+            const option = document.createElement('option');
+            option.value = folder.name;
+            option.textContent = folder.name;
+            moveFolderSelect.appendChild(option);
+        }
+    });
+
+    movePdfName.textContent = `Move ${selectedPdfs.size} PDF(s) to:`;
+    moveModal.classList.add('show');
+}
+
+async function performBulkMove() {
+    const destination = moveFolderSelect.value;
+
+    if (!destination) {
+        alert('Please select a destination folder');
+        return;
+    }
+
+    const pdfsToMove = Array.from(selectedPdfs.values());
+    let successCount = 0;
+    let failCount = 0;
+
+    hideMoveModal();
+
+    for (const pdf of pdfsToMove) {
+        try {
+            const response = await fetch(`/api/folders/${encodeURIComponent(pdf.folderName)}/pdf/${encodeURIComponent(pdf.pdfName)}/move`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ destinationFolderName: destination })
+            });
+
+            if (response.ok) {
+                successCount++;
+            } else {
+                failCount++;
+            }
+        } catch (error) {
+            console.error('Error moving PDF:', error);
+            failCount++;
+        }
+    }
+
+    // Clear selection and reload
+    clearSelection();
+    await loadFolders();
+
+    // Refresh the current view
+    if (selectedFolder && !isGlobalSearch) {
+        await selectFolder(selectedFolder);
+    } else {
+        filterPdfs();
+    }
+
+    // Show result
+    if (failCount === 0) {
+        alert(`Successfully moved ${successCount} PDF(s) to ${destination}`);
+    } else {
+        alert(`Moved ${successCount} PDF(s), ${failCount} failed`);
+    }
+}
+
+// Bulk Duplicate Functions
+async function bulkDuplicatePdfs() {
+    if (selectedPdfs.size === 0) {
+        alert('No PDFs selected');
+        return;
+    }
+
+    if (!confirm(`Duplicate ${selectedPdfs.size} PDF(s)?`)) {
+        return;
+    }
+
+    const pdfsToDuplicate = Array.from(selectedPdfs.values());
+    let successCount = 0;
+    let failCount = 0;
+
+    for (const pdf of pdfsToDuplicate) {
+        try {
+            const response = await fetch(`/api/folders/${encodeURIComponent(pdf.folderName)}/pdf/${encodeURIComponent(pdf.pdfName)}/duplicate`, {
+                method: 'POST'
+            });
+
+            if (response.ok) {
+                successCount++;
+            } else {
+                failCount++;
+            }
+        } catch (error) {
+            console.error('Error duplicating PDF:', error);
+            failCount++;
+        }
+    }
+
+    // Clear selection and reload
+    clearSelection();
+    await loadFolders();
+    await selectFolder(selectedFolder);
+
+    // Show result
+    if (failCount === 0) {
+        alert(`Successfully duplicated ${successCount} PDF(s)`);
+    } else {
+        alert(`Duplicated ${successCount} PDF(s), ${failCount} failed`);
+    }
+}
+
+// Bulk Rename Functions
+function showBulkRenameModal() {
+    if (selectedPdfs.size === 0) {
+        alert('No PDFs selected');
+        return;
+    }
+
+    bulkRenameCount.textContent = selectedPdfs.size;
+    bulkPrefixInput.value = '';
+    bulkSuffixInput.value = '';
+
+    // Initial preview
+    updateBulkRenamePreview();
+
+    bulkRenameModal.classList.add('show');
+}
+
+function hideBulkRenameModal() {
+    bulkRenameModal.classList.remove('show');
+}
+
+function updateBulkRenamePreview() {
+    const prefix = bulkPrefixInput.value;
+    const suffix = bulkSuffixInput.value;
+
+    bulkRenamePreview.innerHTML = '';
+
+    for (const [key, pdf] of selectedPdfs) {
+        const oldName = pdf.pdfName;
+        const baseName = oldName.replace(/\.pdf$/i, '');
+        const newName = `${prefix}${baseName}${suffix}.pdf`;
+
+        const item = document.createElement('div');
+        item.className = 'preview-item';
+
+        const oldSpan = document.createElement('span');
+        oldSpan.className = 'preview-old';
+        oldSpan.textContent = oldName;
+
+        const arrow = document.createElement('span');
+        arrow.className = 'preview-arrow';
+        arrow.textContent = '→';
+
+        const newSpan = document.createElement('span');
+        newSpan.className = 'preview-new';
+        newSpan.textContent = newName;
+
+        item.appendChild(oldSpan);
+        item.appendChild(arrow);
+        item.appendChild(newSpan);
+
+        bulkRenamePreview.appendChild(item);
+    }
+}
+
+async function performBulkRename() {
+    const prefix = bulkPrefixInput.value;
+    const suffix = bulkSuffixInput.value;
+
+    if (!prefix && !suffix) {
+        alert('Please enter a prefix and/or suffix');
+        return;
+    }
+
+    const pdfsToRename = Array.from(selectedPdfs.values());
+    let successCount = 0;
+    let failCount = 0;
+
+    hideBulkRenameModal();
+
+    for (const pdf of pdfsToRename) {
+        const oldName = pdf.pdfName;
+        const baseName = oldName.replace(/\.pdf$/i, '');
+        const newName = `${prefix}${baseName}${suffix}.pdf`;
+
+        try {
+            const response = await fetch(`/api/folders/${encodeURIComponent(pdf.folderName)}/pdf/${encodeURIComponent(oldName)}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ newPdfName: newName })
+            });
+
+            if (response.ok) {
+                successCount++;
+            } else {
+                failCount++;
+            }
+        } catch (error) {
+            console.error('Error renaming PDF:', error);
+            failCount++;
+        }
+    }
+
+    // Clear selection and reload
+    clearSelection();
+    await loadFolders();
+    await selectFolder(selectedFolder);
+
+    // Show result
+    if (failCount === 0) {
+        alert(`Successfully renamed ${successCount} PDF(s)`);
+    } else {
+        alert(`Renamed ${successCount} PDF(s), ${failCount} failed`);
+    }
+}
+
 // Event listeners
 searchInput.addEventListener('input', (e) => {
     searchQuery = /** @type {HTMLInputElement} */ (e.target).value;
@@ -1701,6 +2109,12 @@ searchInput.addEventListener('input', (e) => {
 
 globalSearchCheckbox.addEventListener('change', (e) => {
     isGlobalSearch = /** @type {HTMLInputElement} */ (e.target).checked;
+
+    // Clear selections when toggling search mode
+    if (selectedPdfs.size > 0) {
+        clearSelection();
+    }
+
     filterPdfs();
 });
 
@@ -1766,7 +2180,14 @@ renameModal.addEventListener('click', (e) => {
 
 // Move modal event listeners
 moveCancelBtn.addEventListener('click', hideMoveModal);
-moveConfirmBtn.addEventListener('click', performMovePdf);
+moveConfirmBtn.addEventListener('click', () => {
+    // Check if this is a bulk operation or single PDF operation
+    if (selectedPdfs.size > 0) {
+        performBulkMove();
+    } else {
+        performMovePdf();
+    }
+});
 
 moveModal.addEventListener('click', (e) => {
     if (e.target === moveModal) {
@@ -1783,6 +2204,40 @@ assignFolderModal.addEventListener('click', (e) => {
         hideAssignFolderModal();
     }
 });
+
+// Bulk selection event listeners
+bulkSelectBtn.addEventListener('click', toggleBulkMode);
+clearSelectionBtn.addEventListener('click', clearSelection);
+
+// Bulk operation button listeners
+bulkRenameBtn.addEventListener('click', showBulkRenameModal);
+bulkDuplicateBtn.addEventListener('click', bulkDuplicatePdfs);
+bulkMoveBtn.addEventListener('click', showBulkMoveModal);
+bulkDeleteBtn.addEventListener('click', showBulkDeleteModal);
+
+// Bulk rename modal event listeners
+bulkRenameCancelBtn.addEventListener('click', hideBulkRenameModal);
+bulkRenameConfirmBtn.addEventListener('click', performBulkRename);
+
+bulkRenameModal.addEventListener('click', (e) => {
+    if (e.target === bulkRenameModal) {
+        hideBulkRenameModal();
+    }
+});
+
+// Bulk delete modal event listeners
+bulkDeleteCancelBtn.addEventListener('click', hideBulkDeleteModal);
+bulkDeleteConfirmBtn.addEventListener('click', performBulkDelete);
+
+bulkDeleteModal.addEventListener('click', (e) => {
+    if (e.target === bulkDeleteModal) {
+        hideBulkDeleteModal();
+    }
+});
+
+// Live preview for bulk rename
+bulkPrefixInput.addEventListener('input', updateBulkRenamePreview);
+bulkSuffixInput.addEventListener('input', updateBulkRenamePreview);
 
 // Bookmark modal event listeners
 addBookmarkBtn.addEventListener('click', showAddBookmarkModal);
