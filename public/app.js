@@ -4,6 +4,7 @@ let folders = [];
 let currentPdfs = [];
 let filteredPdfs = [];
 let searchQuery = '';
+let isGlobalSearch = false;
 let renameType = null; // 'folder' or 'pdf'
 let renameTarget = null; // name of folder or pdf to rename
 let movePdfTarget = null; // name of pdf to move
@@ -58,6 +59,7 @@ const bookmarksList = document.getElementById('bookmarks-list');
 const closeBookmarksBtn = document.getElementById('close-bookmarks-btn');
 const folderSortSelect = document.getElementById('folder-sort-select');
 const pdfSortSelect = document.getElementById('pdf-sort-select');
+const globalSearchCheckbox = document.getElementById('global-search-checkbox');
 
 // Utility function to format file size
 function formatFileSize(bytes) {
@@ -190,31 +192,61 @@ async function selectFolder(folderName) {
 
 // Filter PDFs based on search query
 function filterPdfs() {
-    if (!searchQuery) {
-        filteredPdfs = [...currentPdfs];
+    if (isGlobalSearch) {
+        // Search across all folders
+        if (!searchQuery) {
+            filteredPdfs = [];
+        } else {
+            const query = searchQuery.toLowerCase();
+            filteredPdfs = [];
+
+            folders.forEach(folder => {
+                folder.pdfs.forEach(pdf => {
+                    if (pdf.name.toLowerCase().includes(query)) {
+                        filteredPdfs.push({
+                            ...pdf,
+                            folderName: folder.name
+                        });
+                    }
+                });
+            });
+        }
     } else {
-        const query = searchQuery.toLowerCase();
-        filteredPdfs = currentPdfs.filter(pdf =>
-            pdf.name.toLowerCase().includes(query)
-        );
+        // Search within current folder only
+        if (!searchQuery) {
+            filteredPdfs = [...currentPdfs];
+        } else {
+            const query = searchQuery.toLowerCase();
+            filteredPdfs = currentPdfs.filter(pdf =>
+                pdf.name.toLowerCase().includes(query)
+            );
+        }
     }
     renderPdfs();
 }
 
 // Render PDF list for selected folder
 function renderPdfs() {
-    if (!selectedFolder) {
+    // In global search mode, show results even without a selected folder
+    if (!isGlobalSearch && !selectedFolder) {
         pdfListElement.innerHTML = '<p class="empty-message">Select a folder to view PDFs</p>';
         return;
     }
 
-    if (currentPdfs.length === 0) {
+    // In global search, show prompt if no search query
+    if (isGlobalSearch && !searchQuery) {
+        pdfListElement.innerHTML = '<p class="empty-message">Enter a search term to search all folders</p>';
+        return;
+    }
+
+    if (!isGlobalSearch && currentPdfs.length === 0) {
         pdfListElement.innerHTML = '<p class="empty-message">No PDFs in this folder</p>';
         return;
     }
 
     if (filteredPdfs.length === 0) {
-        pdfListElement.innerHTML = '<p class="empty-message">No PDFs match your search</p>';
+        const message = isGlobalSearch ? 'No PDFs found across all folders' : 'No PDFs match your search';
+        pdfListElement.innerHTML = `<p class="empty-message">${message}</p>`;
         return;
     }
 
@@ -244,8 +276,24 @@ function renderPdfs() {
 
         metadata.textContent = metadataParts.join(' • ');
 
+        // Add folder name if in global search mode
+        if (isGlobalSearch && pdf.folderName) {
+            const folderLabel = document.createElement('div');
+            folderLabel.className = 'list-item-folder';
+            folderLabel.textContent = `📁 ${pdf.folderName}`;
+            pdfItem.appendChild(pdfName);
+            pdfItem.appendChild(folderLabel);
+            pdfItem.appendChild(metadata);
+        } else {
+            pdfItem.appendChild(pdfName);
+            pdfItem.appendChild(metadata);
+        }
+
         const actions = document.createElement('div');
         actions.className = 'list-item-actions';
+
+        // Use the correct folder for actions
+        const pdfFolder = pdf.folderName || selectedFolder;
 
         const renameBtn = document.createElement('button');
         renameBtn.className = 'rename-btn';
@@ -253,7 +301,14 @@ function renderPdfs() {
         renameBtn.title = 'Rename PDF';
         renameBtn.onclick = (e) => {
             e.stopPropagation();
-            showRenameModal('pdf', pdf.name);
+            // For global search, temporarily select the folder
+            if (isGlobalSearch && pdf.folderName) {
+                selectFolder(pdf.folderName).then(() => {
+                    showRenameModal('pdf', pdf.name);
+                });
+            } else {
+                showRenameModal('pdf', pdf.name);
+            }
         };
 
         const moveBtn = document.createElement('button');
@@ -262,7 +317,13 @@ function renderPdfs() {
         moveBtn.title = 'Move PDF to another folder';
         moveBtn.onclick = (e) => {
             e.stopPropagation();
-            showMoveModal(pdf.name);
+            if (isGlobalSearch && pdf.folderName) {
+                selectFolder(pdf.folderName).then(() => {
+                    showMoveModal(pdf.name);
+                });
+            } else {
+                showMoveModal(pdf.name);
+            }
         };
 
         const deleteBtn = document.createElement('button');
@@ -271,16 +332,20 @@ function renderPdfs() {
         deleteBtn.title = 'Delete PDF';
         deleteBtn.onclick = (e) => {
             e.stopPropagation();
-            deletePdf(pdf.name);
+            if (isGlobalSearch && pdf.folderName) {
+                selectFolder(pdf.folderName).then(() => {
+                    deletePdf(pdf.name);
+                });
+            } else {
+                deletePdf(pdf.name);
+            }
         };
 
         actions.appendChild(renameBtn);
         actions.appendChild(moveBtn);
         actions.appendChild(deleteBtn);
 
-        pdfItem.addEventListener('click', () => viewPdf(selectedFolder, pdf.name));
-        pdfItem.appendChild(pdfName);
-        pdfItem.appendChild(metadata);
+        pdfItem.addEventListener('click', () => viewPdf(pdfFolder, pdf.name));
         pdfItem.appendChild(actions);
         pdfListElement.appendChild(pdfItem);
     });
@@ -1081,6 +1146,11 @@ async function deleteBookmark(bookmarkId) {
 // Event listeners
 searchInput.addEventListener('input', (e) => {
     searchQuery = e.target.value;
+    filterPdfs();
+});
+
+globalSearchCheckbox.addEventListener('change', (e) => {
+    isGlobalSearch = e.target.checked;
     filterPdfs();
 });
 

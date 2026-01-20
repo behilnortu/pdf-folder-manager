@@ -138,6 +138,23 @@ body {
     color: rgba(255, 255, 255, 0.8);
 }
 
+.list-item-folder {
+    font-size: 11px;
+    color: #999;
+    margin-top: 2px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.list-item:hover .list-item-folder {
+    color: #777;
+}
+
+.list-item.active .list-item-folder {
+    color: rgba(255, 255, 255, 0.7);
+}
+
 .list-item-actions {
     display: flex;
     gap: 6px;
@@ -564,6 +581,33 @@ body {
 .sort-select:focus {
     outline: none;
     border-color: #3498db;
+}
+
+/* Search scope checkbox */
+.search-scope {
+    padding: 8px 10px;
+    display: flex;
+    align-items: center;
+}
+
+.checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    font-size: 13px;
+    color: #555;
+    user-select: none;
+}
+
+.checkbox-label input[type="checkbox"] {
+    cursor: pointer;
+    width: 16px;
+    height: 16px;
+}
+
+.checkbox-label:hover {
+    color: #333;
 }
 
 /* Modal */
