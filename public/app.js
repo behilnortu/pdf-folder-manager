@@ -61,6 +61,14 @@ const closeBookmarksBtn = document.getElementById('close-bookmarks-btn');
 const folderSortSelect = document.getElementById('folder-sort-select');
 const pdfSortSelect = document.getElementById('pdf-sort-select');
 const globalSearchCheckbox = document.getElementById('global-search-checkbox');
+const notesBtn = document.getElementById('notes-btn');
+const notesModal = document.getElementById('notes-modal');
+const notesPdfInfo = document.getElementById('notes-pdf-info');
+const notesTextarea = document.getElementById('notes-textarea');
+const notesSaveBtn = document.getElementById('notes-save-btn');
+const notesCancelBtn = document.getElementById('notes-cancel-btn');
+const themeToggleBtn = document.getElementById('theme-toggle-btn');
+const themeIcon = document.querySelector('.theme-icon');
 
 // Utility function to format file size
 function formatFileSize(bytes) {
@@ -397,6 +405,7 @@ function viewPdf(folderName, pdfName) {
     currentViewingPdf = pdfName;
 
     // Show toolbar buttons when PDF is loaded
+    notesBtn.style.display = 'block';
     clearPdfBtn.style.display = 'block';
     addBookmarkBtn.style.display = 'block';
     viewBookmarksBtn.style.display = 'block';
@@ -417,6 +426,7 @@ function clearPdf() {
     currentViewingPdf = null;
 
     // Hide toolbar buttons
+    notesBtn.style.display = 'none';
     clearPdfBtn.style.display = 'none';
     addBookmarkBtn.style.display = 'none';
     viewBookmarksBtn.style.display = 'none';
@@ -1176,6 +1186,69 @@ async function deleteBookmark(bookmarkId) {
     }
 }
 
+// Notes functions
+async function showNotesModal() {
+    if (!currentViewingFolder || !currentViewingPdf) {
+        return;
+    }
+
+    notesPdfInfo.textContent = `PDF: ${currentViewingPdf}`;
+
+    // Load existing note
+    try {
+        const response = await fetch(`/api/notes/${encodeURIComponent(currentViewingFolder)}/${encodeURIComponent(currentViewingPdf)}`);
+        const data = await response.json();
+
+        notesTextarea.value = data.note.text || '';
+    } catch (error) {
+        console.error('Error loading note:', error);
+        notesTextarea.value = '';
+    }
+
+    notesModal.classList.add('show');
+    notesTextarea.focus();
+}
+
+function hideNotesModal() {
+    notesModal.classList.remove('show');
+    notesTextarea.value = '';
+}
+
+async function saveNote() {
+    if (!currentViewingFolder || !currentViewingPdf) {
+        return;
+    }
+
+    const text = notesTextarea.value.trim();
+
+    try {
+        const response = await fetch(`/api/notes/${encodeURIComponent(currentViewingFolder)}/${encodeURIComponent(currentViewingPdf)}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ text })
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+            hideNotesModal();
+            // Show brief success message
+            const originalText = notesBtn.querySelector('.toolbar-btn-text').textContent;
+            notesBtn.querySelector('.toolbar-btn-text').textContent = 'Saved!';
+            setTimeout(() => {
+                notesBtn.querySelector('.toolbar-btn-text').textContent = originalText;
+            }, 1500);
+        } else {
+            alert(data.error || 'Failed to save note');
+        }
+    } catch (error) {
+        console.error('Error saving note:', error);
+        alert('Failed to save note');
+    }
+}
+
 // Event listeners
 searchInput.addEventListener('input', (e) => {
     searchQuery = e.target.value;
@@ -1262,6 +1335,17 @@ bookmarksViewModal.addEventListener('click', (e) => {
     }
 });
 
+// Notes modal event listeners
+notesBtn.addEventListener('click', showNotesModal);
+notesCancelBtn.addEventListener('click', hideNotesModal);
+notesSaveBtn.addEventListener('click', saveNote);
+
+notesModal.addEventListener('click', (e) => {
+    if (e.target === notesModal) {
+        hideNotesModal();
+    }
+});
+
 // Trash modal event listeners
 trashBtn.addEventListener('click', showTrashModal);
 closeTrashBtn.addEventListener('click', hideTrashModal);
@@ -1327,8 +1411,41 @@ document.addEventListener('mouseup', () => {
     }
 });
 
+// Theme toggle functionality
+function toggleTheme() {
+    const body = document.body;
+    const isDarkMode = body.classList.toggle('dark-mode');
+
+    // Update icon and text
+    themeIcon.textContent = isDarkMode ? '☀️' : '🌙';
+    const themeText = themeToggleBtn.querySelector('.toolbar-btn-text');
+    themeText.textContent = isDarkMode ? 'Light Mode' : 'Dark Mode';
+
+    // Save preference to localStorage
+    localStorage.setItem('theme', isDarkMode ? 'dark' : 'light');
+}
+
+function loadThemePreference() {
+    const savedTheme = localStorage.getItem('theme');
+    const themeText = themeToggleBtn.querySelector('.toolbar-btn-text');
+
+    if (savedTheme === 'dark') {
+        document.body.classList.add('dark-mode');
+        themeIcon.textContent = '☀️';
+        themeText.textContent = 'Light Mode';
+    } else {
+        document.body.classList.remove('dark-mode');
+        themeIcon.textContent = '🌙';
+        themeText.textContent = 'Dark Mode';
+    }
+}
+
+// Theme toggle event listener
+themeToggleBtn.addEventListener('click', toggleTheme);
+
 // Initialize the application
 async function init() {
+    loadThemePreference(); // Load theme preference first
     await loadFolders();
     await loadTrash(); // Load trash count on startup
     startPolling();

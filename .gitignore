@@ -5,6 +5,7 @@ node_modules/
 pdfs/
 .trash/
 .bookmarks.json
+.notes.json
 
 # System files
 .DS_Store

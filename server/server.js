@@ -13,6 +13,7 @@ const PDF_DIR = path.join(__dirname, '../pdfs');
 const TRASH_DIR = path.join(__dirname, '../.trash');
 const TRASH_METADATA = path.join(TRASH_DIR, 'metadata.json');
 const BOOKMARKS_FILE = path.join(__dirname, '../.bookmarks.json');
+const NOTES_FILE = path.join(__dirname, '../.notes.json');
 
 // Configure multer for file uploads
 const storage = multer.diskStorage({
@@ -98,6 +99,27 @@ async function saveBookmarks(bookmarks) {
 
 function generateBookmarkId() {
     return Date.now() + '-' + Math.random().toString(36).substr(2, 9);
+}
+
+// Notes helpers
+async function loadNotes() {
+    try {
+        if (fsSync.existsSync(NOTES_FILE)) {
+            const data = await fs.readFile(NOTES_FILE, 'utf8');
+            return JSON.parse(data);
+        }
+    } catch (err) {
+        console.error('Error loading notes:', err);
+    }
+    return {};
+}
+
+async function saveNotes(notes) {
+    try {
+        await fs.writeFile(NOTES_FILE, JSON.stringify(notes, null, 2));
+    } catch (err) {
+        console.error('Error saving notes:', err);
+    }
 }
 
 // Helper function to get PDF page count
@@ -520,6 +542,49 @@ app.delete('/api/bookmarks/:id', async (req, res) => {
     } catch (err) {
         console.error('Error deleting bookmark:', err);
         res.status(500).json({ error: 'Failed to delete bookmark' });
+    }
+});
+
+// API endpoint to get note for a specific PDF
+app.get('/api/notes/:folderName/:pdfName', async (req, res) => {
+    const { folderName, pdfName } = req.params;
+    const noteKey = `${folderName}/${pdfName}`;
+
+    try {
+        const notes = await loadNotes();
+        const note = notes[noteKey] || { text: '', updatedAt: null };
+        res.json({ note });
+    } catch (err) {
+        console.error('Error loading note:', err);
+        res.status(500).json({ error: 'Failed to load note' });
+    }
+});
+
+// API endpoint to save note for a specific PDF
+app.post('/api/notes/:folderName/:pdfName', async (req, res) => {
+    const { folderName, pdfName } = req.params;
+    const { text } = req.body;
+    const noteKey = `${folderName}/${pdfName}`;
+
+    try {
+        const notes = await loadNotes();
+
+        if (text && text.trim()) {
+            // Save or update note
+            notes[noteKey] = {
+                text: text.trim(),
+                updatedAt: new Date().toISOString()
+            };
+        } else {
+            // Delete note if text is empty
+            delete notes[noteKey];
+        }
+
+        await saveNotes(notes);
+        res.json({ success: true, note: notes[noteKey] });
+    } catch (err) {
+        console.error('Error saving note:', err);
+        res.status(500).json({ error: 'Failed to save note' });
     }
 });
 

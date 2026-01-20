@@ -32,6 +32,10 @@
         <!-- Main Section: PDF Viewer -->
         <main class="main-section" id="main-section">
             <div class="main-toolbar">
+                <button id="notes-btn" class="toolbar-btn" style="display: none;" title="View/edit notes for this PDF">
+                    <span class="toolbar-btn-icon">📝</span>
+                    <span class="toolbar-btn-text">Notes</span>
+                </button>
                 <button id="add-bookmark-btn" class="toolbar-btn" style="display: none;" title="Bookmark current page">
                     <span class="toolbar-btn-icon">🔖</span>
                     <span class="toolbar-btn-text">Add Bookmark</span>
@@ -43,6 +47,10 @@
                 <button id="clear-pdf-btn" class="toolbar-btn" style="display: none;" title="Clear PDF viewer">
                     <span class="toolbar-btn-icon">✕</span>
                     <span class="toolbar-btn-text">Clear PDF</span>
+                </button>
+                <button id="theme-toggle-btn" class="toolbar-btn" title="Toggle dark mode">
+                    <span class="toolbar-btn-icon theme-icon">🌙</span>
+                    <span class="toolbar-btn-text">Dark Mode</span>
                 </button>
             </div>
             <div id="pdf-viewer" class="pdf-viewer">
@@ -164,6 +172,21 @@
             </div>
             <div class="modal-actions">
                 <button id="close-bookmarks-btn" class="btn btn-secondary">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal for PDF notes -->
+    <div id="notes-modal" class="modal">
+        <div class="modal-content modal-large">
+            <div class="modal-header">
+                <h3>📝 Notes</h3>
+                <p id="notes-pdf-info" style="margin: 0; color: #666; font-size: 14px;"></p>
+            </div>
+            <textarea id="notes-textarea" class="notes-textarea" placeholder="Add notes or description for this PDF..."></textarea>
+            <div class="modal-actions">
+                <button id="notes-save-btn" class="btn btn-success">Save Notes</button>
+                <button id="notes-cancel-btn" class="btn btn-secondary">Cancel</button>
             </div>
         </div>
     </div>
