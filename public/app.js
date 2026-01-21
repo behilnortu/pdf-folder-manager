@@ -50,6 +50,7 @@ const rightSidebar = document.getElementById('right-sidebar');
 const leftResizeHandle = document.getElementById('left-resize-handle');
 const rightResizeHandle = document.getElementById('right-resize-handle');
 const clearPdfBtn = document.getElementById('clear-pdf-btn');
+const downloadPdfBtn = document.getElementById('download-pdf-btn');
 const moveModal = document.getElementById('move-modal');
 const movePdfName = document.getElementById('move-pdf-name');
 /** @type {HTMLSelectElement} */
@@ -705,6 +706,7 @@ function viewPdf(folderName, pdfName) {
 
     // Show toolbar buttons when PDF is loaded
     notesBtn.style.display = 'block';
+    downloadPdfBtn.style.display = 'block';
     clearPdfBtn.style.display = 'block';
     addBookmarkBtn.style.display = 'block';
     viewBookmarksBtn.style.display = 'block';
@@ -726,6 +728,7 @@ function clearPdf() {
 
     // Hide toolbar buttons
     notesBtn.style.display = 'none';
+    downloadPdfBtn.style.display = 'none';
     clearPdfBtn.style.display = 'none';
     addBookmarkBtn.style.display = 'none';
     viewBookmarksBtn.style.display = 'none';
@@ -2168,6 +2171,18 @@ uploadPdfBtn.addEventListener('click', () => {
 pdfFileInput.addEventListener('change', uploadPdfs);
 
 clearPdfBtn.addEventListener('click', clearPdf);
+
+downloadPdfBtn.addEventListener('click', () => {
+    if (currentViewingFolder && currentViewingPdf) {
+        const pdfUrl = `/api/pdf/${encodeURIComponent(currentViewingFolder)}/${encodeURIComponent(currentViewingPdf)}`;
+        const link = document.createElement('a');
+        link.href = pdfUrl;
+        link.download = currentViewingPdf;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    }
+});
 
 folderModal.addEventListener('click', (e) => {
     if (e.target === folderModal) {
