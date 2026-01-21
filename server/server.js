@@ -6,6 +6,7 @@ const chokidar = require('chokidar');
 const multer = require('multer');
 const archiver = require('archiver');
 const pdfParse = require('pdf-parse');
+const Anthropic = require('@anthropic-ai/sdk');
 
 const app = express();
 const PORT = 3000;
@@ -15,6 +16,11 @@ const TRASH_METADATA = path.join(TRASH_DIR, 'metadata.json');
 const BOOKMARKS_FILE = path.join(__dirname, '../.bookmarks.json');
 const NOTES_FILE = path.join(__dirname, '../.notes.json');
 const HEADINGS_FILE = path.join(__dirname, '../.headings.json');
+
+// Initialize Anthropic client
+const anthropic = new Anthropic({
+    apiKey: process.env.ANTHROPIC_API_KEY || '',
+});
 
 // Configure multer for file uploads
 const storage = multer.diskStorage({
@@ -167,6 +173,9 @@ async function scanPdfDirectory() {
     try {
         const folders = await fs.readdir(PDF_DIR);
 
+        // Load all notes once to check for summaries
+        const allNotes = await loadNotes();
+
         for (const folder of folders) {
             const folderPath = path.join(PDF_DIR, folder);
             const stats = await fs.stat(folderPath);
@@ -187,11 +196,17 @@ async function scanPdfDirectory() {
                             const fileStats = await fs.stat(filePath);
                             const pageCount = await getPdfPageCount(filePath);
 
+                            // Check if this PDF has a summary in its notes
+                            const noteKey = `${folder}::${file}`;
+                            const note = allNotes[noteKey];
+                            const hasSummary = note && note.text && note.text.includes('## AI Summary');
+
                             newStructure[folder].pdfs.push({
                                 name: file,
                                 size: fileStats.size,
                                 mtime: fileStats.mtime,
-                                pages: pageCount
+                                pages: pageCount,
+                                hasSummary: hasSummary || false
                             });
                         }
                     }
@@ -1115,6 +1130,89 @@ app.delete('/api/trash/empty/all', async (req, res) => {
     } catch (err) {
         console.error('Error emptying trash:', err);
         res.status(500).json({ error: 'Failed to empty trash' });
+    }
+});
+
+// API endpoint to generate PDF summary using Claude
+app.post('/api/folders/:folderName/pdf/:pdfName/summarize', async (req, res) => {
+    try {
+        const { folderName, pdfName } = req.params;
+
+        // Check if API key is configured
+        if (!process.env.ANTHROPIC_API_KEY) {
+            return res.status(503).json({
+                error: 'Anthropic API key not configured. Please set ANTHROPIC_API_KEY environment variable.'
+            });
+        }
+
+        const pdfPath = path.join(PDF_DIR, folderName, pdfName);
+
+        // Check if file exists
+        if (!fsSync.existsSync(pdfPath)) {
+            return res.status(404).json({ error: 'PDF not found' });
+        }
+
+        // Check file size (32MB = 33554432 bytes)
+        const stats = await fs.stat(pdfPath);
+        if (stats.size > 33554432) {
+            return res.status(413).json({
+                error: 'PDF exceeds 32MB limit. Please use a smaller file.'
+            });
+        }
+
+        // Read PDF file as base64
+        const pdfBuffer = await fs.readFile(pdfPath);
+        const pdfBase64 = pdfBuffer.toString('base64');
+
+        console.log(`Generating summary for ${pdfName}...`);
+
+        // Call Claude API with PDF
+        const message = await anthropic.messages.create({
+            model: 'claude-sonnet-4-20250514',
+            max_tokens: 1024,
+            messages: [{
+                role: 'user',
+                content: [
+                    {
+                        type: 'document',
+                        source: {
+                            type: 'base64',
+                            media_type: 'application/pdf',
+                            data: pdfBase64,
+                        },
+                    },
+                    {
+                        type: 'text',
+                        text: 'Please provide a standard summary of this PDF document in 150-300 words. Focus on the main topic, key points, methodology (if applicable), findings/conclusions, and any important implications. Write in a clear, professional tone suitable for quick reference.'
+                    }
+                ],
+            }],
+        });
+
+        // Extract summary text from response
+        const summary = message.content[0].text;
+
+        console.log(`Summary generated successfully for ${pdfName}`);
+
+        res.json({
+            success: true,
+            summary: summary
+        });
+    } catch (err) {
+        console.error('Error generating summary:', err);
+
+        // Handle specific Anthropic API errors
+        if (err.status === 401) {
+            return res.status(401).json({ error: 'Invalid Anthropic API key' });
+        }
+        if (err.status === 429) {
+            return res.status(429).json({ error: 'Rate limit exceeded. Please try again later.' });
+        }
+
+        res.status(500).json({
+            error: 'Failed to generate summary',
+            details: err.message
+        });
     }
 });
 

@@ -51,6 +51,7 @@ const leftResizeHandle = document.getElementById('left-resize-handle');
 const rightResizeHandle = document.getElementById('right-resize-handle');
 const clearPdfBtn = document.getElementById('clear-pdf-btn');
 const downloadPdfBtn = document.getElementById('download-pdf-btn');
+const summarizeBtn = document.getElementById('summarize-btn');
 const moveModal = document.getElementById('move-modal');
 const movePdfName = document.getElementById('move-pdf-name');
 /** @type {HTMLSelectElement} */
@@ -524,6 +525,22 @@ function renderPdfs() {
         pdfName.className = 'list-item-name';
         pdfName.textContent = pdf.name;
 
+        // Add sparkle icon if PDF has a summary
+        if (pdf.hasSummary) {
+            const sparkle = document.createElement('span');
+            sparkle.className = 'summary-sparkle';
+            sparkle.textContent = '✨';
+            sparkle.title = 'View AI Summary';
+            sparkle.onclick = (e) => {
+                e.stopPropagation();
+                // Set the viewing folder and PDF, then open notes modal
+                currentViewingFolder = pdfFolder;
+                currentViewingPdf = pdf.name;
+                showNotesModal();
+            };
+            pdfName.appendChild(sparkle);
+        }
+
         // Add metadata display
         const metadata = document.createElement('div');
         metadata.className = 'list-item-metadata';
@@ -706,6 +723,7 @@ function viewPdf(folderName, pdfName) {
 
     // Show toolbar buttons when PDF is loaded
     notesBtn.style.display = 'block';
+    summarizeBtn.style.display = 'block';
     downloadPdfBtn.style.display = 'block';
     clearPdfBtn.style.display = 'block';
     addBookmarkBtn.style.display = 'block';
@@ -728,6 +746,7 @@ function clearPdf() {
 
     // Hide toolbar buttons
     notesBtn.style.display = 'none';
+    summarizeBtn.style.display = 'none';
     downloadPdfBtn.style.display = 'none';
     clearPdfBtn.style.display = 'none';
     addBookmarkBtn.style.display = 'none';
@@ -1823,6 +1842,113 @@ async function saveNote() {
     }
 }
 
+// Summarize PDF with Claude AI
+async function summarizePdf() {
+    if (!currentViewingFolder || !currentViewingPdf) {
+        return;
+    }
+
+    // Disable button and show loading state
+    const originalIcon = summarizeBtn.querySelector('.toolbar-btn-icon').textContent;
+    const originalText = summarizeBtn.querySelector('.toolbar-btn-text').innerHTML;
+    summarizeBtn.disabled = true;
+    summarizeBtn.querySelector('.toolbar-btn-icon').textContent = '⏳';
+    summarizeBtn.querySelector('.toolbar-btn-text').innerHTML = 'Generating...<br><small>Please wait</small>';
+
+    try {
+        const response = await fetch(`/api/folders/${encodeURIComponent(currentViewingFolder)}/pdf/${encodeURIComponent(currentViewingPdf)}/summarize`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+            // Get existing notes
+            let existingNote = '';
+            try {
+                const notesResponse = await fetch(`/api/notes/${encodeURIComponent(currentViewingFolder)}/${encodeURIComponent(currentViewingPdf)}`);
+                const notesData = await notesResponse.json();
+                existingNote = notesData.note.text || '';
+            } catch (error) {
+                console.log('No existing notes found');
+            }
+
+            // Prepare new note text with summary
+            const summaryMarker = '## AI Summary\n\n';
+            let newNoteText = '';
+
+            // Check if there's already a summary
+            if (existingNote.includes(summaryMarker)) {
+                // Replace existing summary
+                const parts = existingNote.split(summaryMarker);
+                const beforeSummary = parts[0];
+                const afterSummaryStart = parts[1];
+
+                // Find where the summary ends (look for next ## heading or end of text)
+                const afterSummaryParts = afterSummaryStart.split(/\n##\s/);
+                const restOfNotes = afterSummaryParts.length > 1 ? '\n## ' + afterSummaryParts.slice(1).join('\n## ') : '';
+
+                newNoteText = beforeSummary + summaryMarker + data.summary + '\n\n' + restOfNotes;
+            } else {
+                // Add summary at the beginning
+                newNoteText = summaryMarker + data.summary + '\n\n' + (existingNote ? '---\n\n' + existingNote : '');
+            }
+
+            // Save the updated notes
+            const saveResponse = await fetch(`/api/notes/${encodeURIComponent(currentViewingFolder)}/${encodeURIComponent(currentViewingPdf)}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ text: newNoteText.trim() })
+            });
+
+            if (saveResponse.ok) {
+                // Show success message
+                summarizeBtn.querySelector('.toolbar-btn-icon').textContent = '✅';
+                summarizeBtn.querySelector('.toolbar-btn-text').innerHTML = 'Done!<br><small>Saved to Notes</small>';
+
+                // Reload PDFs to show sparkle icon
+                await selectFolder(selectedFolder);
+
+                setTimeout(() => {
+                    summarizeBtn.querySelector('.toolbar-btn-icon').textContent = originalIcon;
+                    summarizeBtn.querySelector('.toolbar-btn-text').innerHTML = originalText;
+                    summarizeBtn.disabled = false;
+                }, 2500);
+            } else {
+                throw new Error('Failed to save summary to notes');
+            }
+        } else {
+            // Show error
+            summarizeBtn.querySelector('.toolbar-btn-icon').textContent = '❌';
+            summarizeBtn.querySelector('.toolbar-btn-text').innerHTML = 'Error<br><small>See console</small>';
+            console.error('Summarization error:', data.error);
+            alert(data.error || 'Failed to generate summary');
+
+            setTimeout(() => {
+                summarizeBtn.querySelector('.toolbar-btn-icon').textContent = originalIcon;
+                summarizeBtn.querySelector('.toolbar-btn-text').innerHTML = originalText;
+                summarizeBtn.disabled = false;
+            }, 2500);
+        }
+    } catch (error) {
+        console.error('Error summarizing PDF:', error);
+        summarizeBtn.querySelector('.toolbar-btn-icon').textContent = '❌';
+        summarizeBtn.querySelector('.toolbar-btn-text').innerHTML = 'Error<br><small>Try again</small>';
+        alert('Failed to generate summary. Please check console for details.');
+
+        setTimeout(() => {
+            summarizeBtn.querySelector('.toolbar-btn-icon').textContent = originalIcon;
+            summarizeBtn.querySelector('.toolbar-btn-text').innerHTML = originalText;
+            summarizeBtn.disabled = false;
+        }, 2500);
+    }
+}
+
 // Bulk Delete Functions
 function showBulkDeleteModal() {
     if (selectedPdfs.size === 0) {
@@ -2183,6 +2309,8 @@ downloadPdfBtn.addEventListener('click', () => {
         document.body.removeChild(link);
     }
 });
+
+summarizeBtn.addEventListener('click', summarizePdf);
 
 folderModal.addEventListener('click', (e) => {
     if (e.target === folderModal) {
