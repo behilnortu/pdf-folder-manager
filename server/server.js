@@ -1,5 +1,9 @@
-const express = require('express');
 const path = require('path');
+// Load environment variables from .env file with override enabled
+// This is necessary because some environments may set empty env vars
+require('dotenv').config({ path: path.join(__dirname, '../.env'), override: true });
+
+const express = require('express');
 const fs = require('fs').promises;
 const fsSync = require('fs');
 const chokidar = require('chokidar');
@@ -197,7 +201,7 @@ async function scanPdfDirectory() {
                             const pageCount = await getPdfPageCount(filePath);
 
                             // Check if this PDF has a summary in its notes
-                            const noteKey = `${folder}::${file}`;
+                            const noteKey = `${folder}/${file}`;
                             const note = allNotes[noteKey];
                             const hasSummary = note && note.text && note.text.includes('## AI Summary');
 
