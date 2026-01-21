@@ -621,15 +621,28 @@ body.dark-mode .collapse-icon {
 
 #summarize-btn {
     background-color: #B86855;
+    padding: 6px 8px;
 }
 
 #summarize-btn:hover {
     background-color: #C87865;
 }
 
+#summarize-btn .toolbar-btn-icon {
+    font-size: 22px;
+    margin-bottom: 2px;
+}
+
+#summarize-btn .toolbar-btn-text {
+    font-size: 11px;
+    line-height: 1.1;
+}
+
 #summarize-btn small {
-    font-size: 9px;
+    font-size: 8px;
     opacity: 0.9;
+    display: block;
+    margin-top: 1px;
 }
 
 #add-bookmark-btn {
