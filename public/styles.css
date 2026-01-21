@@ -621,6 +621,14 @@ body.dark-mode .collapse-icon {
     background-color: #B95553;
 }
 
+#download-pdf-btn {
+    background-color: #973E3E;
+}
+
+#download-pdf-btn:hover {
+    background-color: #A74E4E;
+}
+
 #clear-pdf-btn {
     background-color: #8B3A3A;
 }
