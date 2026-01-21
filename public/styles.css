@@ -635,14 +635,7 @@ body.dark-mode .collapse-icon {
 
 #summarize-btn .toolbar-btn-text {
     font-size: 11px;
-    line-height: 1.1;
-}
-
-#summarize-btn small {
-    font-size: 8px;
-    opacity: 0.9;
-    display: block;
-    margin-top: 1px;
+    line-height: 1.2;
 }
 
 #add-bookmark-btn {
@@ -651,6 +644,10 @@ body.dark-mode .collapse-icon {
 
 #add-bookmark-btn:hover {
     background-color: #D16660;
+}
+
+#add-bookmark-btn .toolbar-btn-icon {
+    font-size: 22px;
 }
 
 #view-bookmarks-btn {

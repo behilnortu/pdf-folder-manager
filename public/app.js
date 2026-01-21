@@ -1853,7 +1853,7 @@ async function summarizePdf() {
     const originalText = summarizeBtn.querySelector('.toolbar-btn-text').innerHTML;
     summarizeBtn.disabled = true;
     summarizeBtn.querySelector('.toolbar-btn-icon').textContent = '⏳';
-    summarizeBtn.querySelector('.toolbar-btn-text').innerHTML = 'CLAUDE<br>Working...<br><small>Please wait</small>';
+    summarizeBtn.querySelector('.toolbar-btn-text').innerHTML = 'CLAUDE<br>Working...';
 
     try {
         const response = await fetch(`/api/folders/${encodeURIComponent(currentViewingFolder)}/pdf/${encodeURIComponent(currentViewingPdf)}/summarize`, {
@@ -1909,7 +1909,7 @@ async function summarizePdf() {
             if (saveResponse.ok) {
                 // Show success message
                 summarizeBtn.querySelector('.toolbar-btn-icon').textContent = '✅';
-                summarizeBtn.querySelector('.toolbar-btn-text').innerHTML = 'CLAUDE<br>Done!<br><small>Saved to Notes</small>';
+                summarizeBtn.querySelector('.toolbar-btn-text').innerHTML = 'CLAUDE<br>Done!';
 
                 // Reload PDFs to show sparkle icon
                 await selectFolder(selectedFolder);
@@ -1925,7 +1925,7 @@ async function summarizePdf() {
         } else {
             // Show error
             summarizeBtn.querySelector('.toolbar-btn-icon').textContent = '❌';
-            summarizeBtn.querySelector('.toolbar-btn-text').innerHTML = 'CLAUDE<br>Error<br><small>See console</small>';
+            summarizeBtn.querySelector('.toolbar-btn-text').innerHTML = 'CLAUDE<br>Error';
             console.error('Summarization error:', data.error);
             alert(data.error || 'Failed to generate summary');
 
@@ -1938,7 +1938,7 @@ async function summarizePdf() {
     } catch (error) {
         console.error('Error summarizing PDF:', error);
         summarizeBtn.querySelector('.toolbar-btn-icon').textContent = '❌';
-        summarizeBtn.querySelector('.toolbar-btn-text').innerHTML = 'CLAUDE<br>Error<br><small>Try again</small>';
+        summarizeBtn.querySelector('.toolbar-btn-text').innerHTML = 'CLAUDE<br>Error';
         alert('Failed to generate summary. Please check console for details.');
 
         setTimeout(() => {
