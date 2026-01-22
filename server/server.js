@@ -158,12 +158,35 @@ function generateHeadingId() {
     return 'heading_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
 }
 
-// Helper function to get PDF page count
-async function getPdfPageCount(filePath) {
+// Page count cache: key is "folder/filename", value is {mtime, size, pages}
+const pageCountCache = new Map();
+
+// Helper function to get PDF page count with caching
+async function getPdfPageCount(filePath, fileStats) {
+    const cacheKey = filePath;
+    const cached = pageCountCache.get(cacheKey);
+
+    // Use cache if file hasn't changed (same size and mtime)
+    if (cached &&
+        cached.size === fileStats.size &&
+        cached.mtime.getTime() === fileStats.mtime.getTime()) {
+        return cached.pages;
+    }
+
+    // Calculate page count
     try {
         const dataBuffer = await fs.readFile(filePath);
         const data = await pdfParse(dataBuffer);
-        return data.numpages;
+        const pageCount = data.numpages;
+
+        // Cache the result
+        pageCountCache.set(cacheKey, {
+            mtime: fileStats.mtime,
+            size: fileStats.size,
+            pages: pageCount
+        });
+
+        return pageCount;
     } catch (err) {
         console.error(`Error getting page count for ${filePath}:`, err.message);
         return null; // Return null if we can't get page count
@@ -198,7 +221,7 @@ async function scanPdfDirectory() {
                         if (file.toLowerCase().endsWith('.pdf')) {
                             const filePath = path.join(folderPath, file);
                             const fileStats = await fs.stat(filePath);
-                            const pageCount = await getPdfPageCount(filePath);
+                            const pageCount = await getPdfPageCount(filePath, fileStats);
 
                             // Check if this PDF has a summary in its notes
                             const noteKey = `${folder}/${file}`;
@@ -221,7 +244,7 @@ async function scanPdfDirectory() {
         }
 
         fileStructure = newStructure;
-        console.log('File structure updated:', fileStructure);
+        console.log('File structure updated - cached:', pageCountCache.size, 'PDFs');
     } catch (err) {
         console.error('Error scanning PDF directory:', err);
         fileStructure = {};

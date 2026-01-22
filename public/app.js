@@ -194,6 +194,12 @@ function renderFolderItem(folder, isUnderHeading = false) {
     folderName.className = 'list-item-name';
     folderName.textContent = folder.name;
 
+    // Add PDF count
+    const pdfCount = document.createElement('span');
+    pdfCount.className = 'folder-pdf-count';
+    pdfCount.textContent = `(${folder.pdfs ? folder.pdfs.length : 0} pdfs)`;
+    folderName.appendChild(pdfCount);
+
     const actions = document.createElement('div');
     actions.className = 'list-item-actions';
 
