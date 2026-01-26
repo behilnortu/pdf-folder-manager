@@ -34,3 +34,11 @@ package-lock.json
 
 # Claude conversation exports
 *.txt
+
+# Claude Code configuration
+.claude/
+
+# contains sensitive information and should not be committed
+.env.backup
+.env
+
