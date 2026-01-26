@@ -21,7 +21,7 @@ A web-based PDF management system that automatically organizes and displays PDFs
 
 ## ✨ Features
 
-- **Automatic Detection**: Monitors the `Projects/` directory for new PDFs and folders (configurable via `PDF_DIR` env var)
+- **Automatic Detection**: Monitors the `pdfs/` directory for new PDFs and folders (configurable via `PDF_DIR` env var)
 - **Three-Column Layout**:
   - Left sidebar: List of folders containing PDFs
   - Main section: PDF viewer
@@ -58,7 +58,7 @@ npm start
 npm install
 ```
 
-2. The `Projects/` directory will be created automatically on first run (or set `PDF_DIR` env var to use a custom path)
+2. The `pdfs/` directory will be created automatically on first run (or set `PDF_DIR` env var to use a custom path)
 
 ## 💻 Usage
 
@@ -94,7 +94,7 @@ http://localhost:3000
    - Search is case-insensitive and updates in real-time
 
    **Adding PDFs Manually:**
-   - You can also create subdirectories in the `Projects/` folder (e.g., `Projects/invoices/`)
+   - You can also create subdirectories in the `pdfs/` folder (e.g., `pdfs/invoices/`)
    - Add PDF files to these subdirectories
    - The website will automatically detect and display them within 2 seconds
 
@@ -108,7 +108,7 @@ http://localhost:3000
 │   └── app.js          # Frontend JavaScript
 ├── server/             # Backend server
 │   └── server.js       # Express server with file monitoring
-├── Projects/           # PDF storage (auto-created, configurable via PDF_DIR)
+├── pdfs/               # PDF storage (auto-created, configurable via PDF_DIR)
 │   ├── folder1/        # Example folder
 │   └── folder2/        # Example folder
 ├── package.json        # Dependencies
@@ -120,9 +120,9 @@ http://localhost:3000
 To test the application, create some sample folders:
 
 ```bash
-mkdir -p Projects/invoices
-mkdir -p Projects/reports
-mkdir -p Projects/contracts
+mkdir -p pdfs/invoices
+mkdir -p pdfs/reports
+mkdir -p pdfs/contracts
 ```
 
 Then add some PDF files to these folders, and they will appear automatically in the web interface.

@@ -25,7 +25,7 @@ Key features:
 │   └── app.js       # Frontend JavaScript
 ├── server/          # Backend server
 │   └── server.js    # Express server with file monitoring
-├── Projects/        # Folder containing PDF subdirectories (configurable via PDF_DIR env var)
+├── pdfs/            # Folder containing PDF subdirectories (configurable via PDF_DIR env var)
 └── package.json     # Dependencies
 ```
 
@@ -80,8 +80,8 @@ Key features:
 # Install dependencies
 npm install
 
-# Create the Projects directory if it doesn't exist
-mkdir -p Projects
+# Create the pdfs directory if it doesn't exist
+mkdir -p pdfs
 ```
 
 ### Running the Application
@@ -91,7 +91,7 @@ mkdir -p Projects
 npm start
 
 # The server will start on http://localhost:3000
-# Add PDF files to subdirectories in the Projects/ folder
+# Add PDF files to subdirectories in the pdfs/ folder
 # The website will automatically update
 ```
 
