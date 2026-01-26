@@ -2,7 +2,7 @@
 node_modules/
 
 # User data
-pdfs/
+Projects/
 .trash/
 .bookmarks.json
 .notes.json

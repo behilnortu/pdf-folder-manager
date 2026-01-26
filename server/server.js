@@ -14,7 +14,7 @@ const Anthropic = require('@anthropic-ai/sdk');
 
 const app = express();
 const PORT = 3000;
-const PDF_DIR = path.join(__dirname, '../pdfs');
+const PDF_DIR = process.env.PDF_DIR || path.join(__dirname, '../Projects');
 const TRASH_DIR = path.join(__dirname, '../.trash');
 const TRASH_METADATA = path.join(TRASH_DIR, 'metadata.json');
 const BOOKMARKS_FILE = path.join(__dirname, '../.bookmarks.json');
@@ -1262,7 +1262,7 @@ async function startServer() {
     app.listen(PORT, () => {
         console.log(`Server running at http://localhost:${PORT}`);
         console.log(`PDF directory: ${PDF_DIR}`);
-        console.log('Add PDFs to subdirectories in the pdfs/ folder');
+        console.log('Add PDFs to subdirectories in the Projects/ folder (or set PDF_DIR env var)');
     });
 }
 
